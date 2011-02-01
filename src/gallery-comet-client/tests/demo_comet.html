@@ -1,0 +1,64 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN""
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,user-scalable=no">
+
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <title>Test</title>
+        <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js&3.3.0/build/loader/loader-min.js"></script>
+        <script type="text/javascript" src="gallery-comet-client-debug.js"></script>
+        <style type="text/css" media="screen">
+#example-canvas { /* for YDN */
+    height: 250px;
+}
+
+document {
+    position: relative;
+}
+
+.touch-target {
+    font-size: 40px;
+}
+
+#container {
+    margin: 20px;
+    height: 600px;
+    width: 400px;
+}
+#demo {
+    background: #ccc;
+    border: 4px solid #999;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    zoom: 1;
+}
+
+        </style>
+    </head>
+    <body class="yui-skin-sam">
+        <div id='container'>
+            <div class='touch-target' id='demo'>Watch Me</div>
+        </div>
+
+        <script type="text/javascript" charset="utf-8">
+YUI().use('node', 'gallery-comet-client', function(Y) {
+    var node = Y.one('#demo');
+
+    var url = 'stream_source.php';
+    var client = new Y.CometClient(url, {
+            on: {
+                //start:
+                //end:
+                pushed: function(data) {
+                    Y.log(data);
+                    node.set('innerHTML', data);
+                }
+            }
+        });
+
+});
+        </script>
+    </body>
+</html>
