@@ -95,6 +95,7 @@ CometClient.prototype = {
     },
 
     _createIFrame: function(url, callback) {
+        // Don't let transDoc be GC-ed.
         transDoc = new ActiveXObject('htmlfile');
         transDoc.open();
         //TODO: perhaps use diferent domain. But, don't assign domain if same. It will break in IE8.
@@ -109,12 +110,6 @@ CometClient.prototype = {
         var iframeDiv = transDoc.createElement('div');
         transDoc.body.appendChild(iframeDiv);
         iframeDiv.innerHTML = '<iframe src="' + url + '"></iframe>';
-
-        setTimeout(function() {
-            //this.dummy = transDoc.parentWindow;
-            //transDoc.parentWindow.callback('hello');
-        }, 2000);
-
     },
 
     /**
