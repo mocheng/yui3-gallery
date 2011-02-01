@@ -14,16 +14,14 @@ else {
 header("Cache-control: no-cache");
 
 for ($i = 0; $i < 5; ++$i) {
-    //$data = ($i . ': Hello world');
-    $info = array(
-        'id' => $i,
-        'text' => 'Hello world ' . $i
-    );
-    $data = json_encode($info);
+    $words = ($i . ': Hello world');
 
     if ($isIE) {
-        echo '<script type="text/javascript">parent.callback("' . $data . '")</script>';
+        echo '<script type="text/javascript">parent.callback("' . $words. '")</script>';
     } else {
+        $len = strlen($words);
+        $data = "Content-Length: {$len}\n{$words}\n";
+
         echo $data;
     }
 

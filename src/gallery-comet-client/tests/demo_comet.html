@@ -53,6 +53,7 @@ YUI().use('node', 'gallery-comet-client', function(Y) {
                 //end:
                 pushed: function(data) {
                     Y.log(data);
+                    //node.set('innerHTML', data + '<br/>' + node.get('innerHTML'));
                     node.set('innerHTML', data);
                 }
             }

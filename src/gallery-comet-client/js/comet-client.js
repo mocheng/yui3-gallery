@@ -1,4 +1,6 @@
 
+var TIMER = 50;
+
 function CometClient(url, cfg) {
     Y.Event.Target.call(this);
 
@@ -19,10 +21,10 @@ CometClient.prototype = {
          * Last pushed data index which is to track newly pushed data start point.
          *
          * @type int
-         * @property _lastPushedIdx
+         * @property _lastMsgIdx
          * @private 
          */
-        this._lastPushedIdx = 0;
+        this._lastMsgIdx = 0;
 
         if (Y.UA.ie) {
             this._createIFrame(this.url, function(data) { 
@@ -42,48 +44,61 @@ CometClient.prototype = {
             xhr.open('GET', this.url, true);
             xhr.send();
 
-            /*
-            Y.later(100, this, function() {
-                this.fire('comet:pushed', xhr.responseText);
-
-                if (this.cfg && this.cfg.on && this.cfg.on.pushed) {
-                    //TODO: it is possible that multiple messages are pushed together. There should be a way to delimit messages.
-                    //
-                    this.cfg.on.pushed(xhr.responseText);
-                }
-
-            }, null, true);
-            */
+            // For Opera, it doesn't trigger INTERACTIVE ready state for each pushed data. So, we have to do polling.
+            //
+            if (Y.UA.opera) {
+                //TODO: make TIMER configurable
+                Y.later(TIMER, this, this._pollResponse, [xhr], true);
+            }
         }
+    },
+
+    _pollResponse: function(xhr) {
+        this._parseResponse(xhr.responseText);
     },
 
     _onXhrStateChange: function(xhr) {
         var msg;
 
         Y.log('readyState:' + xhr.readyState);
-        if (xhr.readyState === 3) {
-            //TODO: process data
-            //Y.log(xhr.responseText);
+        if ((xhr.readyState === 3) && !Y.UA.opera) {
+            this._parseResponse(xhr.responseText);
+        }
+    },
 
-            msg = xhr.responseText.substring(this.lastPushedIdx);
-            this.lastPushedIdx = xhr.responseText.length;
-            Y.log('pushed msg:<' + msg + '>');
-            Y.log('lastPushedIdx: ' + this.lastPushedIdx);
+    _parseResponse: function(response) {
+        while (true) {
+            var data = response.substring(this._lastMsgIdx);
 
-            this.fire('comet:pushed', msg);
-
-            if (this.cfg && this.cfg.on && this.cfg.on.pushed) {
-                //TODO: it is possible that multiple messages are pushed together. There should be a way to delimit messages.
-                //
-                this.cfg.on.pushed(msg);
+            var match = data.match(/^Content-Length:\s*(\d*)\s*\n/);
+            if (!match) {
+                // no match, keep waiting!
+                return;
             }
+            var dataLen = match[1] * 1;
+            this._lastMsgIdx = this._lastMsgIdx + match[0].length + dataLen + 1;
+            var msg = data.substr(match[0].length, dataLen);
+
+            Y.log('pushed msg:<' + msg + '>');
+            Y.log('_lastMsgIdx: ' + this._lastMsgIdx);
+
+            this._fireMessageEvent(msg);
+        }
+    },
+
+    _fireMessageEvent: function(msg) {
+        this.fire('comet:pushed', msg);
+
+        if (this.cfg && this.cfg.on && this.cfg.on.pushed) {
+            this.cfg.on.pushed(msg);
         }
     },
 
     _createIFrame: function(url, callback) {
         transDoc = new ActiveXObject('htmlfile');
         transDoc.open();
-        //TODO: perhaps use diferent domain
+        //TODO: perhaps use diferent domain. But, don't assign domain if same. It will break in IE8.
+        //
         //transDoc.write('<html><script type="text/javascript">document.domain="' + document.domain + '";</script></html>');
         transDoc.write('<html></html>');
         transDoc.close();
@@ -139,3 +154,7 @@ CometClient.prototype = {
 Y.extend(CometClient, Y.Event.Target, CometClient.prototype);
 
 Y.CometClient = CometClient;
+
+//TODO: 
+//  Reset stream connection after configurable time and/or after configurable amount of data is pushed. Otherwise, memory leak is a problem.
+//
