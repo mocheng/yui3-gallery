@@ -1,16 +1,20 @@
-
-var TIMER = 50;
+/**
+ *
+ * @module gallery-comet-client
+ */
 
 function CometClient(url, cfg) {
     Y.Event.Target.call(this);
 
     this.url = url;
-    
-    this.cfg = cfg;
+
+    this.cfg = Y.merge({
+        on: {}, // on events
+        xhrPollingInterval: 50 // xhr polling internal for Opera
+    }, cfg);
 
     this._init();
 }
-
 
 CometClient.prototype = {
     _init: function() {
@@ -28,16 +32,14 @@ CometClient.prototype = {
 
         if (Y.UA.ie) {
             this._createIFrame(this.url, function(data) { 
-                if (that.cfg && that.cfg.on && that.cfg.on.pushed) {
-                    //TODO: it is possible that multiple messages are pushed together. There should be a way to delimit messages.
-                    //
+                if (that.cfg.on.pushed) {
                     that.cfg.on.pushed(data);
                 }
             });
 
         } else {
             xhr = this._createXHR();
-            
+
             xhr.onreadystatechange = function() {
                 that._onXhrStateChange(xhr);
             };
@@ -47,8 +49,7 @@ CometClient.prototype = {
             // For Opera, it doesn't trigger INTERACTIVE ready state for each pushed data. So, we have to do polling.
             //
             if (Y.UA.opera) {
-                //TODO: make TIMER configurable
-                Y.later(TIMER, this, this._pollResponse, [xhr], true);
+                Y.later(this.cfg.xhrPollingInterval, this, this._pollResponse, [xhr], true);
             }
         }
     },
@@ -89,14 +90,14 @@ CometClient.prototype = {
     _fireMessageEvent: function(msg) {
         this.fire('comet:pushed', msg);
 
-        if (this.cfg && this.cfg.on && this.cfg.on.pushed) {
+        if (this.cfg.on.pushed) {
             this.cfg.on.pushed(msg);
         }
     },
 
     _createIFrame: function(url, callback) {
         // Don't let transDoc be GC-ed.
-        transDoc = new ActiveXObject('htmlfile');
+        var transDoc = window.transDoc = new window.ActiveXObject('htmlfile');
         transDoc.open();
         //TODO: perhaps use diferent domain. But, don't assign domain if same. It will break in IE8.
         //
@@ -150,6 +151,6 @@ Y.extend(CometClient, Y.Event.Target, CometClient.prototype);
 
 Y.CometClient = CometClient;
 
-//TODO: 
+//TODO:
 //  Reset stream connection after configurable time and/or after configurable amount of data is pushed. Otherwise, memory leak is a problem.
 //
