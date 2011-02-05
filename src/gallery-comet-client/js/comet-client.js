@@ -9,6 +9,7 @@ function CometClient(url, cfg) {
     this.url = url;
 
     this.cfg = Y.merge({
+        transport: 'server-stream', // or 'long-poll'
         on: {}, // on events
         xhrPollingInterval: 50 // xhr polling internal for Opera
     }, cfg);
@@ -18,6 +19,44 @@ function CometClient(url, cfg) {
 
 CometClient.prototype = {
     _init: function() {
+        switch (this.cfg.transport) {
+            case 'long-poll':
+                this._initLongPoll();
+                break;
+            case 'server-stream':
+            default:
+                this._initStream();
+                break;
+        }
+    },
+
+    _initLongPoll: function() {
+        this._poll();
+    },
+
+    _poll: function() {
+        var xhr,
+            that = this;
+
+        xhr = this._createXHR();
+        xhr.onreadystatechange = function() {
+            that._onXhrPollStateChange(xhr);
+        };
+
+        xhr.open('GET', this.url, true);
+        xhr.send();
+    },
+
+    _onXhrPollStateChange: function(xhr) {
+        if ((xhr.status === 200) && (xhr.readyState === 4)) {
+            this._parseResponse(xhr.responseText);
+            this._fireMessageEvent(xhr.responseText);
+
+            this._poll();
+        }
+    },
+
+    _initStream: function() {
         var xhr,
             that = this;
 
@@ -41,7 +80,7 @@ CometClient.prototype = {
             xhr = this._createXHR();
 
             xhr.onreadystatechange = function() {
-                that._onXhrStateChange(xhr);
+                that._onXhrStreamStateChange(xhr);
             };
             xhr.open('GET', this.url, true);
             xhr.send();
@@ -58,11 +97,12 @@ CometClient.prototype = {
         this._parseResponse(xhr.responseText);
     },
 
-    _onXhrStateChange: function(xhr) {
+    _onXhrStreamStateChange: function(xhr) {
         var msg;
 
         Y.log('readyState:' + xhr.readyState);
-        if ((xhr.readyState === 3) && !Y.UA.opera) {
+
+        if ((xhr.status === 200) && (xhr.readyState === 3) && !Y.UA.opera) {
             this._parseResponse(xhr.responseText);
         }
     },
