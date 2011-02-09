@@ -22,16 +22,17 @@ document {
     background: #ccc;
     border: 4px solid #999;
     height: 100%;
-    width: 350px;
+    width: 300px;
     overflow: hidden;
     zoom: 1;
     float: left;
+    padding-right: 30px;
 }
 
 #container {
     margin: 20px;
     height: 600px;
-    width: 800px;
+    width: 1200px;
 }
 
         </style>
@@ -40,12 +41,14 @@ document {
         <div id='container'>
             <div class='touch-target' id='demo1'>Watch Me</div>
             <div class='touch-target' id='demo2'>Watch Me</div>
+            <div class='touch-target' id='demo3'>Watch Me</div>
         </div>
 
         <script type="text/javascript" charset="utf-8">
 YUI().use('node', 'gallery-comet-client', function(Y) {
     var node1 = Y.one('#demo1');
     var node2 = Y.one('#demo2');
+    var node3 = Y.one('#demo3');
 
     var streamUrl = 'stream_source.php';
     var pollUrl = 'poll_source.php';
@@ -74,6 +77,20 @@ YUI().use('node', 'gallery-comet-client', function(Y) {
                 }
             }
         });
+
+    var streamClient2 = new Y.CometClient(streamUrl, {
+            resetTimeout: 5,
+            on: {
+                //start:
+                //end:
+                pushed: function(data) {
+                    Y.log(data);
+                    //node.set('innerHTML', data + '<br/>' + node.get('innerHTML'));
+                    node3.set('innerHTML', data);
+                }
+            }
+        });
+
 
 });
         </script>

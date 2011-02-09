@@ -11,6 +11,7 @@ function CometClient(url, cfg) {
     this.cfg = Y.merge({
         transport: 'server-stream', // or 'long-poll'
         on: {}, // on events
+        resetTimeout: 300, // in server-stream mode, the connection is reset every given seconds to avoid memory leak
         xhrPollingInterval: 50 // xhr polling internal for Opera
     }, cfg);
 
@@ -77,7 +78,7 @@ CometClient.prototype = {
             });
 
         } else {
-            xhr = this._createXHR();
+            xhr = this.xhr = this._createXHR();
 
             xhr.onreadystatechange = function() {
                 that._onXhrStreamStateChange(xhr);
@@ -90,6 +91,21 @@ CometClient.prototype = {
             if (Y.UA.opera) {
                 Y.later(this.cfg.xhrPollingInterval, this, this._pollResponse, [xhr], true);
             }
+        }
+
+        this._streamStartTime = new Date();
+    },
+
+    _endStream: function() {
+        if (this.transDoc) {
+            this.transDoc = null; // Let it be GC-ed
+        }
+
+        if (this.xhr) {
+            var xhr = this.xhr;
+            this.xhr = null;
+            xhr.onreadystatechange = null;
+            xhr.abort();
         }
     },
 
@@ -114,7 +130,7 @@ CometClient.prototype = {
             var match = data.match(/^Content-Length:\s*(\d*)\s*\n/);
             if (!match) {
                 // no match, keep waiting!
-                return;
+                break;
             }
             var dataLen = match[1] * 1;
             this._lastMsgIdx = this._lastMsgIdx + match[0].length + dataLen + 1;
@@ -124,6 +140,14 @@ CometClient.prototype = {
             Y.log('_lastMsgIdx: ' + this._lastMsgIdx);
 
             this._fireMessageEvent(msg);
+        }
+
+        if (this.cfg.transport === 'server-stream') {
+            Y.log('timeout:' + this.cfg.resetTimeout);
+            if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.cfg.resetTimeout * 1000) {
+                this._endStream();
+                this._initStream();
+            }
         }
     },
 
@@ -137,19 +161,22 @@ CometClient.prototype = {
 
     _createIFrame: function(url, callback) {
         // Don't let transDoc be GC-ed.
-        var transDoc = window.transDoc = new window.ActiveXObject('htmlfile');
-        transDoc.open();
-        //TODO: perhaps use diferent domain. But, don't assign domain if same. It will break in IE8.
+        this.transDoc = new window.ActiveXObject('htmlfile');
+        this.transDoc.open();
+
+        // Don't assign domain if same. It will break in IE8.
         //
-        //transDoc.write('<html><script type="text/javascript">document.domain="' + document.domain + '";</script></html>');
-        transDoc.write('<html></html>');
-        transDoc.close();
+        if (url.match(/^http.?:\/\/([^\/]+)\/?/)[1] !== window.document.domain) {
+            this.transDoc.write('<html><script type="text/javascript">document.domain="' + window.document.domain + '";</script></html>');
+        }
+        this.transDoc.write('<html></html>');
+        this.transDoc.close();
 
-        transDoc.parentWindow.callback = callback;
-        transDoc.parentWindow.mo = 'mo';
+        this.transDoc.parentWindow.callback = callback;
+        this.transDoc.parentWindow.mo = 'mo';
 
-        var iframeDiv = transDoc.createElement('div');
-        transDoc.body.appendChild(iframeDiv);
+        var iframeDiv = this.transDoc.createElement('div');
+        this.transDoc.body.appendChild(iframeDiv);
         iframeDiv.innerHTML = '<iframe src="' + url + '"></iframe>';
     },
 
@@ -190,7 +217,3 @@ CometClient.prototype = {
 Y.extend(CometClient, Y.Event.Target, CometClient.prototype);
 
 Y.CometClient = CometClient;
-
-//TODO:
-//  Reset stream connection after configurable time and/or after configurable amount of data is pushed. Otherwise, memory leak is a problem.
-//
