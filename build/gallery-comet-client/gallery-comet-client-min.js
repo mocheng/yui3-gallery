@@ -1,0 +1,1 @@
+YUI.add("gallery-comet-client",function(a){a.foo=function(){return"foo";};},"@VERSION@");
