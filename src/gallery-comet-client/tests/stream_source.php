@@ -13,7 +13,7 @@ else {
 }
 header("Cache-control: no-cache");
 
-for ($i = 0; $i < 50; ++$i) {
+for ($i = 0; $i < 10; ++$i) {
     $words = ($i . ': Hello world');
 
     if ($isIE) {

@@ -41,17 +41,18 @@ CometClient.prototype = {
         } else {
             xhr = this.xhr = this._createXHR();
 
-            xhr.onreadystatechange = function() {
-                that._onXhrStreamStateChange(xhr);
-            };
-            xhr.open('GET', this.url, true);
-            xhr.send();
-
             // For Opera, it doesn't trigger INTERACTIVE ready state for each pushed data. So, we have to do polling.
             //
             if (Y.UA.opera) {
-                Y.later(this.cfg.xhrPollingInterval, this, this._pollResponse, [xhr], true);
+                this._pollHandler = Y.later(this.cfg.xhrPollingInterval, this, this._pollResponse, [xhr], true);
+            } else {
+                xhr.onreadystatechange = function() {
+                    that._onXhrStreamStateChange(xhr);
+                };
             }
+            xhr.open('GET', this.url, true);
+            xhr.send();
+
         }
 
         this._streamStartTime = new Date();
@@ -60,6 +61,10 @@ CometClient.prototype = {
     _endStream: function() {
         if (this.transDoc) {
             this.transDoc = null; // Let it be GC-ed
+        }
+
+        if (this._pollHandler) {
+            this._pollHandler.cancel();
         }
 
         if (this.xhr) {
