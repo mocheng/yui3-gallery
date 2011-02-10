@@ -11,7 +11,7 @@ function CometClient(url, cfg) {
     this.cfg = Y.merge({
         transport: 'server-stream', // or 'long-poll'
         on: {}, // on events
-        resetTimeout: 300, // in server-stream mode, the connection is reset every given seconds to avoid memory leak
+        resetTimeout: 300 * 1000, // in server-stream mode, the connection is reset every given seconds to avoid memory leak
         xhrPollingInterval: 50 // xhr polling internal for Opera
     }, cfg);
 
@@ -144,7 +144,7 @@ CometClient.prototype = {
 
         if (this.cfg.transport === 'server-stream') {
             Y.log('timeout:' + this.cfg.resetTimeout);
-            if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.cfg.resetTimeout * 1000) {
+            if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.cfg.resetTimeout) {
                 this._endStream();
                 this._initStream();
             }
