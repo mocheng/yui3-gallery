@@ -41,17 +41,14 @@ document {
         <div id='container'>
             <div class='touch-target' id='demo1'>Watch Me</div>
             <div class='touch-target' id='demo2'>Watch Me</div>
-            <div class='touch-target' id='demo3'>Watch Me</div>
         </div>
 
         <script type="text/javascript" charset="utf-8">
 YUI().use('node', 'gallery-comet-client', function(Y) {
     var node1 = Y.one('#demo1');
     var node2 = Y.one('#demo2');
-    var node3 = Y.one('#demo3');
 
     var streamUrl = 'stream_source.php';
-    var pollUrl = 'poll_source.php';
 
     var streamClient = new Y.CometClient(streamUrl, {
             on: {
@@ -65,8 +62,9 @@ YUI().use('node', 'gallery-comet-client', function(Y) {
             }
         });
 
-    var pollClient = new Y.CometClient(pollUrl, {
-            transport: 'long-poll',
+    // need a way to cheat Firefox to believe it is a different URL
+    var streamClient2 = new Y.CometClient(streamUrl + "?2", {
+            resetTimeout: 5000,
             on: {
                 //start:
                 //end:
@@ -77,20 +75,6 @@ YUI().use('node', 'gallery-comet-client', function(Y) {
                 }
             }
         });
-
-    var streamClient2 = new Y.CometClient(streamUrl, {
-            resetTimeout: 5,
-            on: {
-                //start:
-                //end:
-                pushed: function(data) {
-                    Y.log(data);
-                    //node.set('innerHTML', data + '<br/>' + node.get('innerHTML'));
-                    node3.set('innerHTML', data);
-                }
-            }
-        });
-
 
 });
         </script>

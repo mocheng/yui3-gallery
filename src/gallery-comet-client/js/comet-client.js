@@ -9,54 +9,15 @@ function CometClient(url, cfg) {
     this.url = url;
 
     this.cfg = Y.merge({
-        transport: 'server-stream', // or 'long-poll'
         on: {}, // on events
         resetTimeout: 300 * 1000, // in server-stream mode, the connection is reset every given seconds to avoid memory leak
         xhrPollingInterval: 50 // xhr polling internal for Opera
     }, cfg);
 
-    this._init();
+    this._initStream();
 }
 
 CometClient.prototype = {
-    _init: function() {
-        switch (this.cfg.transport) {
-            case 'long-poll':
-                this._initLongPoll();
-                break;
-            case 'server-stream':
-            default:
-                this._initStream();
-                break;
-        }
-    },
-
-    _initLongPoll: function() {
-        this._poll();
-    },
-
-    _poll: function() {
-        var xhr,
-            that = this;
-
-        xhr = this._createXHR();
-        xhr.onreadystatechange = function() {
-            that._onXhrPollStateChange(xhr);
-        };
-
-        xhr.open('GET', this.url, true);
-        xhr.send();
-    },
-
-    _onXhrPollStateChange: function(xhr) {
-        if ((xhr.status === 200) && (xhr.readyState === 4)) {
-            this._parseResponse(xhr.responseText);
-            this._fireMessageEvent(xhr.responseText);
-
-            this._poll();
-        }
-    },
-
     _initStream: function() {
         var xhr,
             that = this;
@@ -114,27 +75,31 @@ CometClient.prototype = {
     },
 
     _onXhrStreamStateChange: function(xhr) {
-        var msg;
-
         Y.log('readyState:' + xhr.readyState);
 
-        if ((xhr.status === 200) && (xhr.readyState === 3) && !Y.UA.opera) {
-            this._parseResponse(xhr.responseText);
+        //TODO: handle server end response, server no response.
+
+        if (xhr.status === 200) {
+            if ((xhr.readyState === 3) && !Y.UA.opera) {
+                this._parseResponse(xhr.responseText);
+            } else if (xhr.readyState === 4) {
+                this._initStream();
+            }
         }
     },
 
     _parseResponse: function(response) {
         while (true) {
-            var data = response.substring(this._lastMsgIdx);
-
-            var match = data.match(/^Content-Length:\s*(\d*)\s*\n/);
+            var dataLen, msg,
+                data = response.substring(this._lastMsgIdx),
+                match = data.match(/^Content-Length:\s*(\d*)\s*\n/);
             if (!match) {
                 // no match, keep waiting!
                 break;
             }
-            var dataLen = match[1] * 1;
+            dataLen = match[1] * 1;
             this._lastMsgIdx = this._lastMsgIdx + match[0].length + dataLen + 1;
-            var msg = data.substr(match[0].length, dataLen);
+            msg = data.substr(match[0].length, dataLen);
 
             Y.log('pushed msg:<' + msg + '>');
             Y.log('_lastMsgIdx: ' + this._lastMsgIdx);
@@ -142,12 +107,10 @@ CometClient.prototype = {
             this._fireMessageEvent(msg);
         }
 
-        if (this.cfg.transport === 'server-stream') {
-            Y.log('timeout:' + this.cfg.resetTimeout);
-            if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.cfg.resetTimeout) {
-                this._endStream();
-                this._initStream();
-            }
+        Y.log('timeout:' + this.cfg.resetTimeout);
+        if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.cfg.resetTimeout) {
+            this._endStream();
+            this._initStream();
         }
     },
 
