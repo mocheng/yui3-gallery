@@ -45,11 +45,11 @@ CometClient.prototype = {
             //
             if (Y.UA.opera) {
                 this._pollHandler = Y.later(this.cfg.xhrPollingInterval, this, this._pollResponse, [xhr], true);
-            } else {
-                xhr.onreadystatechange = function() {
-                    that._onXhrStreamStateChange(xhr);
-                };
             }
+
+            xhr.onreadystatechange = function() {
+                that._onXhrStreamStateChange();
+            };
             xhr.open('GET', this.url, true);
             xhr.send();
 
@@ -79,8 +79,11 @@ CometClient.prototype = {
         this._parseResponse(xhr.responseText);
     },
 
-    _onXhrStreamStateChange: function(xhr) {
-        Y.log('readyState:' + xhr.readyState);
+    _onXhrStreamStateChange: function() {
+        var xhr = this.xhr;
+        if (!xhr) {
+            return;
+        }
 
         //TODO: handle server end response, server no response.
 
@@ -88,6 +91,12 @@ CometClient.prototype = {
             if ((xhr.readyState === 3) && !Y.UA.opera) {
                 this._parseResponse(xhr.responseText);
             } else if (xhr.readyState === 4) {
+                if (Y.UA.opera) {
+                    // poll it for the last time in case something is missing.
+                    this._pollResponse(xhr);
+                }
+
+                this._endStream();
                 this._initStream();
             }
         }
