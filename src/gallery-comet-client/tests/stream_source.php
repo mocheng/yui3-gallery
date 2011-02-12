@@ -19,14 +19,14 @@ for ($i = 0; $i < 10; ++$i) {
     if ($isIE) {
         echo '<script type="text/javascript">parent.callback("' . $words. '")</script>';
     } else {
-        $len = strlen($words);
-        $data = "Content-Length: {$len}\n{$words}\n";
+        $len = dechex(strlen($words));
+        $data = "{$len}\r\n{$words}\r\n";
 
         echo $data;
     }
 
-    flush();
     ob_flush();
+    flush();
 
     sleep(1);
 }

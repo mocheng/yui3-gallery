@@ -41,18 +41,11 @@ CometClient.prototype = {
         } else {
             xhr = this.xhr = this._createXHR();
 
-            // For Opera, it doesn't trigger INTERACTIVE ready state for each pushed data. So, we have to do polling.
-            //
-            if (Y.UA.opera) {
-                this._pollHandler = Y.later(this.cfg.xhrPollingInterval, this, this._pollResponse, [xhr], true);
-            }
-
             xhr.onreadystatechange = function() {
                 that._onXhrStreamStateChange();
             };
             xhr.open('GET', this.url, true);
             xhr.send();
-
         }
 
         this._streamStartTime = new Date();
@@ -75,8 +68,8 @@ CometClient.prototype = {
         }
     },
 
-    _pollResponse: function(xhr) {
-        this._parseResponse(xhr.responseText);
+    _pollResponse: function() {
+        this._parseResponse(this.xhr.responseText);
     },
 
     _onXhrStreamStateChange: function() {
@@ -85,15 +78,21 @@ CometClient.prototype = {
             return;
         }
 
-        //TODO: handle server end response, server no response.
+        //TODO: handle situation: server end response, server no response.
 
         if (xhr.status === 200) {
-            if ((xhr.readyState === 3) && !Y.UA.opera) {
-                this._parseResponse(xhr.responseText);
+            if (xhr.readyState === 3) {
+                // For Opera, it doesn't trigger INTERACTIVE ready state for each pushed data. So, we have to do polling.
+                //
+                if (Y.UA.opera) {
+                    this._pollHandler = Y.later(this.cfg.xhrPollingInterval, this, this._pollResponse, null, true);
+                } else {
+                    this._parseResponse(xhr.responseText);
+                }
             } else if (xhr.readyState === 4) {
                 if (Y.UA.opera) {
                     // poll it for the last time in case something is missing.
-                    this._pollResponse(xhr);
+                    this._pollResponse();
                 }
 
                 this._endStream();
@@ -102,26 +101,42 @@ CometClient.prototype = {
         }
     },
 
-    _parseResponse: function(response) {
+    _parseResponse: function(responseText) {
+        // Browser doesn't expose chunked structure to us. So, we have to build chunked data based on HTTP trunked data.
+        //
         while (true) {
-            var dataLen, msg,
-                data = response.substring(this._lastMsgIdx),
-                match = data.match(/^Content-Length:\s*(\d*)\s*\n/);
-            if (!match) {
-                // no match, keep waiting!
+            var msg, msgStartPos, msgEndPos,
+                sizeStartPos, sizeEndPos, sizeLine, size;
+
+            sizeStartPos = this._lastMsgIdx;
+            sizeEndPos = responseText.indexOf('\r\n', sizeStartPos);
+            if (sizeEndPos == -1) {
                 break;
             }
-            dataLen = match[1] * 1;
-            this._lastMsgIdx = this._lastMsgIdx + match[0].length + dataLen + 1;
-            msg = data.substr(match[0].length, dataLen);
+            sizeLine = responseText.substring(sizeStartPos, sizeEndPos);
+            size = Number('0x' + Y.Lang.trim(sizeLine));
 
-            Y.log('pushed msg:<' + msg + '>');
-            Y.log('_lastMsgIdx: ' + this._lastMsgIdx);
+            if (window.isNaN(size)) {
+                Y.log('wrong format');
+                //TODO: reconnect?
+                this._endStream();
+                throw new Error('wrong fomat');
+            }
+
+            msgStartPos = sizeEndPos + 2; //pass '\r\n'
+            msgEndPos = msgStartPos + size;
+
+            if (msgEndPos > responseText.length) {
+                // this chunk doesn't get completed yet.
+                break;
+            }
+
+            this._lastMsgIdx = msgEndPos + 2; // pass '\r\n'
+            msg = responseText.substr(msgStartPos, size);
 
             this._fireMessageEvent(msg);
         }
 
-        Y.log('timeout:' + this.cfg.resetTimeout);
         if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.cfg.resetTimeout) {
             this._endStream();
             this._initStream();
