@@ -3,6 +3,23 @@
  * @module gallery-comet-client
  */
 
+/**
+ * readyState possible value.
+ * http://www.quirksmode.org/blog/archives/2005/09/xmlhttp_notes_r_2.html
+ */
+var READY_STATE = {
+
+    UNINITIALIZED: 0,  // open() has not been called yet.
+
+    LOADING: 1,  // send() has not been called yet.
+
+    LOADED: 2,  // send() has been called, headers and status are available.
+
+    INTERACTIVE: 3,  // Downloading, responseText holds the partial data.
+
+    COMPLETED: 4 // Finished with all operations.
+};
+
 function CometClient(url, cfg) {
     Y.Event.Target.call(this);
 
@@ -11,6 +28,7 @@ function CometClient(url, cfg) {
     this.cfg = Y.merge({
         on: {}, // on events
         resetTimeout: 300 * 1000, // in server-stream mode, the connection is reset every given seconds to avoid memory leak
+        retryOnDisconnect: true, // whether to retry on HTTP dis-connected
         xhrPollingInterval: 50 // xhr polling internal for Opera
     }, cfg);
 
@@ -73,15 +91,22 @@ CometClient.prototype = {
     },
 
     _onXhrStreamStateChange: function() {
-        var xhr = this.xhr;
+        var xhr = this.xhr,
+            status;
         if (!xhr) {
             return;
         }
 
         //TODO: handle situation: server end response, server no response.
 
-        if (xhr.status === 200) {
-            if (xhr.readyState === 3) {
+        try {
+            status = xhr.status;
+        } catch (e) {
+            //Opera throw exception if we check xhr.status when readyState < INTERACTIVE
+        }
+
+        if (status === 200) {
+            if (xhr.readyState === READY_STATE.INTERACTIVE) {
                 // For Opera, it doesn't trigger INTERACTIVE ready state for each pushed data. So, we have to do polling.
                 //
                 if (Y.UA.opera) {
@@ -89,14 +114,16 @@ CometClient.prototype = {
                 } else {
                     this._parseResponse(xhr.responseText);
                 }
-            } else if (xhr.readyState === 4) {
+            } else if (xhr.readyState === READY_STATE.COMPLETED) {
                 if (Y.UA.opera) {
                     // poll it for the last time in case something is missing.
                     this._pollResponse();
                 }
 
-                this._endStream();
-                this._initStream();
+                if (this.cfg.retryOnDisconnect) {
+                    this._endStream();
+                    this._initStream();
+                }
             }
         }
     },
@@ -187,7 +214,7 @@ CometClient.prototype = {
         } else if (window.ActiveXObject) {
             // IE5/6 falls into this block
             //
-            // NOTE: Actually, we cannot implement comet with IE XHR since it doesn't trigger readyState===3 state in progress.
+            // NOTE: Actually, we cannot implement comet with IE XHR since it doesn't trigger readyState===INTERACTIVE state in progress.
             // I keep below code for Long-Poll(perhaps in the future)
             try {
                 xhrObj = new window.ActiveXObject('Msxml2.XMLHTTP');
