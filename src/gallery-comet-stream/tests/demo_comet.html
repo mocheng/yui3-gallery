@@ -7,7 +7,7 @@
         <meta http-equiv="content-type" content="text/html; charset=utf-8">
         <title>Test</title>
         <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js&3.3.0/build/loader/loader-min.js"></script>
-        <script type="text/javascript" src="gallery-comet-client-debug.js"></script>
+        <script type="text/javascript" src="gallery-comet-stream-debug.js"></script>
         <style type="text/css" media="screen">
 #example-canvas { /* for YDN */
     height: 250px;
@@ -44,13 +44,13 @@ document {
         </div>
 
         <script type="text/javascript" charset="utf-8">
-YUI().use('node', 'gallery-comet-client', function(Y) {
+YUI().use('node', 'gallery-comet-stream', function(Y) {
     var node1 = Y.one('#demo1');
     var node2 = Y.one('#demo2');
 
     var streamUrl = 'stream_source.php';
 
-    var streamClient = new Y.CometClient(streamUrl, {
+    var streamClient = new Y.CometStream(streamUrl, {
             on: {
                 //start:
                 //end:
@@ -63,7 +63,7 @@ YUI().use('node', 'gallery-comet-client', function(Y) {
         });
 
     // need a way to cheat Firefox to believe it is a different URL
-    var streamClient2 = new Y.CometClient(streamUrl + "?2", {
+    var streamClient2 = new Y.CometStream(streamUrl + "?2", {
             resetTimeout: 5000,
             on: {
                 //start:

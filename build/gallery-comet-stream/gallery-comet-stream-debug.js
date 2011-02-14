@@ -1,6 +1,8 @@
+YUI.add('gallery-comet-stream', function(Y) {
+
 /**
  *
- * @module gallery-comet-client
+ * @module gallery-comet-stream
  */
 
 /**
@@ -20,7 +22,7 @@ var READY_STATE = {
     COMPLETED: 4 // Finished with all operations.
 };
 
-function CometClient(url, cfg) {
+function CometStream(url, cfg) {
     Y.Event.Target.call(this);
 
     this.url = url;
@@ -35,7 +37,7 @@ function CometClient(url, cfg) {
     this._initStream();
 }
 
-CometClient.prototype = {
+CometStream.prototype = {
     _initStream: function() {
         var xhr,
             that = this;
@@ -233,6 +235,9 @@ CometClient.prototype = {
     }
 };
 
-Y.extend(CometClient, Y.Event.Target, CometClient.prototype);
+Y.extend(CometStream, Y.Event.Target, CometStream.prototype);
 
-Y.CometClient = CometClient;
+Y.CometStream = CometStream;
+
+
+}, '@VERSION@' ,{requires:['event-base','event-custom']});
