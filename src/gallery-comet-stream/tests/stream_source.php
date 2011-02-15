@@ -6,7 +6,7 @@ if ($isIE) {
     header('Content-Type: text/html');
 
     // necessary, since IE will buffer 256 bytes before rendering
-    echo str_repeat('#', 2560);
+    echo str_repeat('#', 256);
 }
 else {
     header('Content-Type: application/json');
