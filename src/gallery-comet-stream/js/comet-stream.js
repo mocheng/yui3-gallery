@@ -18,7 +18,7 @@ var READY_STATE = {
     INTERACTIVE: 3,  // Downloading, responseText holds the partial data.
 
     COMPLETED: 4 // Finished with all operations.
-};
+},
 
 /**
  * @class CometStream
@@ -29,14 +29,14 @@ var READY_STATE = {
  * @description This event is fired when stream is started.
  * @type Event Custom
  */
-var E_START = 'cometStream:start';
+E_START = 'cometStream:start',
 
 /**
  * @event cometStream:fail
  * @description This event is fired when stream fails to be connected.
  * @type Event Custom
  */
-var E_FAIL = 'cometStream:fail';
+E_FAIL = 'cometStream:fail',
 
 
 /**
@@ -44,21 +44,21 @@ var E_FAIL = 'cometStream:fail';
  * @description This event is fired when message is pushed in the stream.
  * @type Event Custom
  */
-var E_PUSHED = 'cometStream:pushed';
+E_PUSHED = 'cometStream:pushed',
 
 /**
  * @event cometStream:reconnect
  * @description This event is fired when stream connection is reconnected.
  * @type Event Custom
  */
-var E_RECONNECT = 'cometStream:reconnect';
+E_RECONNECT = 'cometStream:reconnect',
 
 /**
  * @event cometStream:invalid
  * @description This event is fired when server pushed message violate message format.
  * @type Event Custom
  */
-var E_INVALID_FORMAT= 'cometStream:invalidFormat';
+E_INVALID_FORMAT= 'cometStream:invalidFormat';
 
 function CometStream(url, cfg) {
     CometStream.superclass.constructor.call(this);
@@ -104,13 +104,15 @@ CometStream.prototype = {
         }
 
         this._failTimer = Y.later(this.cfg.connectTimeout, this, this._failTimeout, null);
-
         this._streamStartTime = new Date();
+
+        this.fire(E_START);
     },
 
     _failTimeout: function() {
         this.fire(E_FAIL);
         this._failTimer = null;
+        this._endStream();
     },
 
     _succeedToConnect: function() {
@@ -170,14 +172,19 @@ CometStream.prototype = {
                 }
 
                 if (this.cfg.retryOnDisconnect) {
-                    this._endStream();
-                    this._initStream();
+                    this._reconnect();
                 }
             }
         } else {
             this.fire(E_FAIL);
         }
     },
+
+    _reconnect: function() {
+        this._endStream();
+        this._initStream();
+        this.fire(E_RECONNECT);
+    }
 
     _parseResponse: function(responseText) {
         this._succeedToConnect();
@@ -217,8 +224,7 @@ CometStream.prototype = {
         }
 
         if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.cfg.resetTimeout) {
-            this._endStream();
-            this._initStream();
+            this._reconnect();
         }
     },
 
