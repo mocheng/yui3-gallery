@@ -1,11 +1,11 @@
 YUI.add('gallery-comet-stream', function(Y) {
 
-/**
+/*
  *
  * @module gallery-comet-stream
  */
 
-/**
+/*
  * readyState possible value.
  * http://www.quirksmode.org/blog/archives/2005/09/xmlhttp_notes_r_2.html
  */
@@ -20,19 +20,67 @@ var READY_STATE = {
     INTERACTIVE: 3,  // Downloading, responseText holds the partial data.
 
     COMPLETED: 4 // Finished with all operations.
-};
+},
+
+/**
+ * @class CometStream
+ */
+
+/**
+ * @event cometStream:start
+ * @description This event is fired when stream is started.
+ * @type Event Custom
+ */
+E_START = 'cometStream:start',
+
+/**
+ * @event cometStream:fail
+ * @description This event is fired when stream fails to be connected.
+ * @type Event Custom
+ */
+E_FAIL = 'cometStream:fail',
+
+/**
+ * @event cometStream:pushed
+ * @description This event is fired when message is pushed in the stream.
+ * @type Event Custom
+ */
+E_PUSHED = 'cometStream:pushed',
+
+/**
+ * @event cometStream:reconnect
+ * @description This event is fired when stream connection is reconnected.
+ * @type Event Custom
+ */
+E_RECONNECT = 'cometStream:reconnect',
+
+/**
+ * @event cometStream:invalid
+ * @description This event is fired when server pushed message violate message format.
+ * @type Event Custom
+ */
+E_INVALID_FORMAT= 'cometStream:invalidFormat';
 
 function CometStream(url, cfg) {
-    Y.Event.Target.call(this);
+    CometStream.superclass.constructor.call(this);
 
     this.url = url;
 
     this.cfg = Y.merge({
         on: {}, // on events
+        connectTimeout: 20 * 1000, // timeout to create stream connection
         resetTimeout: 300 * 1000, // in server-stream mode, the connection is reset every given seconds to avoid memory leak
         retryOnDisconnect: true, // whether to retry on HTTP dis-connected
-        xhrPollingInterval: 50 // xhr polling internal for Opera
+        xhrPollingInterval: 50 // xhr polling internal(milliseconds) for Opera
     }, cfg);
+
+    this.publish(E_FAIL, {
+        fireOnce: true
+    });
+
+    this.publish(E_START, {
+        fireOnce: true
+    });
 
     this._initStream();
 }
@@ -42,12 +90,8 @@ CometStream.prototype = {
         var xhr,
             that = this;
 
-        /**
+        /*
          * Last pushed data index which is to track newly pushed data start point.
-         *
-         * @type int
-         * @property _lastMsgIdx
-         * @private 
          */
         this._lastMsgIdx = 0;
 
@@ -64,11 +108,36 @@ CometStream.prototype = {
             xhr.onreadystatechange = function() {
                 that._onXhrStreamStateChange();
             };
+
             xhr.open('GET', this.url, true);
+
             xhr.send();
         }
 
+        this._failTimer = Y.later(this.cfg.connectTimeout, this, this._failTimeout, null);
         this._streamStartTime = new Date();
+
+        this._fireStartEvent();
+    },
+
+    _failTimeout: function() {
+        this._fireFailEvent();
+        this._failTimer = null;
+        this._endStream();
+    },
+
+    _succeedToConnect: function() {
+        if (this._failTimer) {
+            this._failTimer.cancel();
+        }
+    },
+
+    /**
+     * @method close
+     * @description close this stream.
+     */
+    close: function() {
+        this._endStream();
     },
 
     _endStream: function() {
@@ -99,13 +168,12 @@ CometStream.prototype = {
             return;
         }
 
-        //TODO: handle situation: server end response, server no response.
-
-        try {
-            status = xhr.status;
-        } catch (e) {
+        if (xhr.readyState < READY_STATE.INTERACTIVE) {
             //Opera throw exception if we check xhr.status when readyState < INTERACTIVE
+            return;
         }
+
+        status = xhr.status;
 
         if (status === 200) {
             if (xhr.readyState === READY_STATE.INTERACTIVE) {
@@ -123,16 +191,38 @@ CometStream.prototype = {
                 }
 
                 if (this.cfg.retryOnDisconnect) {
-                    this._endStream();
-                    this._initStream();
+                    this._reconnect();
                 }
             }
+        } else {
+            this._fireFailEvent();
         }
     },
 
+    _fireStartEvent: function() {
+        // fire it later to avoid triggering 'fail' when initiating stream
+        Y.later(0, this, function() {
+            this.fire(E_START);
+        });
+    },
+
+    _fireFailEvent: function() {
+        // fire it later to avoid triggering 'fail' when initiating stream
+        Y.later(0, this, function() {
+            this.fire(E_FAIL);
+        });
+    },
+
+    _reconnect: function() {
+        this._endStream();
+        this._initStream();
+        this.fire(E_RECONNECT);
+    },
+
     _parseResponse: function(responseText) {
+        this._succeedToConnect();
+
         // Browser doesn't expose chunked structure to us. So, we have to build chunked data based on HTTP trunked data.
-        //
         while (true) {
             var msg, msgStartPos, msgEndPos,
                 sizeStartPos, sizeEndPos, sizeLine, size;
@@ -146,9 +236,9 @@ CometStream.prototype = {
             size = Number('0x' + Y.Lang.trim(sizeLine));
 
             if (window.isNaN(size)) {
-                //TODO: reconnect?
+                this.fire(E_INVALID_FORMAT);
                 this._endStream();
-                throw new Error('wrong fomat');
+                return;
             }
 
             msgStartPos = sizeEndPos + 2; //pass '\r\n'
@@ -166,13 +256,12 @@ CometStream.prototype = {
         }
 
         if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.cfg.resetTimeout) {
-            this._endStream();
-            this._initStream();
+            this._reconnect();
         }
     },
 
     _fireMessageEvent: function(msg) {
-        this.fire('comet:pushed', msg);
+        this.fire(E_PUSHED, msg);
 
         if (this.cfg.on.pushed) {
             this.cfg.on.pushed(msg);
@@ -200,7 +289,7 @@ CometStream.prototype = {
         iframeDiv.innerHTML = '<iframe src="' + url + '"></iframe>';
     },
 
-    /**
+    /*
      * create an XMLHttpRequest according to current browser.
      *
      * @method _createXHR

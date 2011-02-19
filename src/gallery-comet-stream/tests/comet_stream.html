@@ -1,0 +1,136 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,user-scalable=no">
+
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <title>Test</title>
+        <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js&3.3.0/build/loader/loader-min.js"></script>
+        <script type="text/javascript" src="gallery-comet-stream-debug.js"></script>
+        <style type="text/css" media="screen">
+        </style>
+    </head>
+    <body class="yui3-skin-sam">
+        <h2> 
+            Note: this page is supposed to take effects in PHP server.
+        </h2>
+        <div id="console"></div>
+
+        <script type="text/javascript" charset="utf-8">
+YUI({
+    //filter: 'raw',
+    //combine: false
+}).use('console', 'gallery-comet-stream', 'test', function(Y) {
+
+    var testSuite = new Y.Test.Suite("Comet Stream Tests");
+
+    testSuite.add(new Y.Test.Case({
+        name: 'Error cases',
+
+        setUp: function() { },
+
+        tearDown: function(){
+            this.comet.close();
+            this.comet = null;
+        },
+
+        test_response_without_200_status_code_should_cause_fail_event: function() {
+            this.comet = new Y.CometStream("404.php", {
+                connectTimeout: 1500
+            });
+
+            this.comet.on("cometStream:fail", Y.bind(function(event) {
+                this.resume(function(){ });
+            }, this));
+
+            this.wait(3000);
+        },
+
+        test_response_with_invalid_format_should_cause_invalidFormat_event: function() {
+            this.comet = new Y.CometStream("resources/invalid_stream.php", {
+                connectTimeout: 1500
+            });
+
+            this.comet.on("cometStream:invalidFormat", Y.bind(function(event) {
+                this.resume(function(){ });
+            }, this));
+
+            this.wait(3000);
+        }
+    }));
+
+    testSuite.add(new Y.Test.Case({
+        name: 'pushed event cases',
+
+        setUp: function() { },
+
+        tearDown: function(){
+            this.comet.close();
+            this.comet = null;
+        },
+
+        test_response_with_single_message_pushed_should_trigger_one_pushed_event: function() {
+            this.comet = new Y.CometStream("resources/one_message.php", {
+                connectTimeout: 1500
+            });
+
+            this.comet.on("cometStream:pushed", Y.bind(function(msg) {
+                var that = this;
+                this.resume(function(){
+                    Y.Assert.areEqual('Hello World', msg);
+                });
+            }, this));
+
+            this.wait(3000);
+        },
+
+        test_reconnect_event_triggered_when_stream_is_reset: function() {
+            this.comet = new Y.CometStream("resources/three_message.php", {
+                connectTimeout: 1500,
+                resetTimeout: 1000
+            });
+
+            this.comet.on("cometStream:reconnect", Y.bind(function(msg) {
+                this.resume(function(){
+                });
+            }, this));
+
+            this.wait(3000);
+        },
+
+        test_response_with_three_message_should_trigger_pushed_event_three_times: function() {
+            this.comet = new Y.CometStream("resources/three_message.php", {
+                connectTimeout: 1500
+            });
+
+            var idx = 0;
+            this.comet.on("cometStream:pushed", Y.bind(function(msg) {
+                var that = this;
+                this.resume(function(){
+                    Y.Assert.areEqual(idx + ': Hello World', msg);
+                    if (idx < 2) {
+                        that.wait(3000);
+                    }
+                });
+
+                ++idx;
+            }, this));
+
+            this.wait(3000);
+        }
+
+    }));
+
+    var report = new Y.Console({
+        verbose : true,
+        //consoleLimit : 10,
+        newestOnTop : false
+    });
+    report.render('#console');
+
+    Y.Test.Runner.add(testSuite);
+    Y.Test.Runner.run();
+});
+        </script>
+    </body>
+</html>

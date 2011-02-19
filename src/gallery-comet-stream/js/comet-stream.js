@@ -38,7 +38,6 @@ E_START = 'cometStream:start',
  */
 E_FAIL = 'cometStream:fail',
 
-
 /**
  * @event cometStream:pushed
  * @description This event is fired when message is pushed in the stream.
@@ -73,6 +72,14 @@ function CometStream(url, cfg) {
         xhrPollingInterval: 50 // xhr polling internal(milliseconds) for Opera
     }, cfg);
 
+    this.publish(E_FAIL, {
+        fireOnce: true
+    });
+
+    this.publish(E_START, {
+        fireOnce: true
+    });
+
     this._initStream();
 }
 
@@ -99,18 +106,20 @@ CometStream.prototype = {
             xhr.onreadystatechange = function() {
                 that._onXhrStreamStateChange();
             };
+
             xhr.open('GET', this.url, true);
+
             xhr.send();
         }
 
         this._failTimer = Y.later(this.cfg.connectTimeout, this, this._failTimeout, null);
         this._streamStartTime = new Date();
 
-        this.fire(E_START);
+        this._fireStartEvent();
     },
 
     _failTimeout: function() {
-        this.fire(E_FAIL);
+        this._fireFailEvent();
         this._failTimer = null;
         this._endStream();
     },
@@ -119,6 +128,14 @@ CometStream.prototype = {
         if (this._failTimer) {
             this._failTimer.cancel();
         }
+    },
+
+    /**
+     * @method close
+     * @description close this stream.
+     */
+    close: function() {
+        this._endStream();
     },
 
     _endStream: function() {
@@ -176,15 +193,29 @@ CometStream.prototype = {
                 }
             }
         } else {
-            this.fire(E_FAIL);
+            this._fireFailEvent();
         }
+    },
+
+    _fireStartEvent: function() {
+        // fire it later to avoid triggering 'fail' when initiating stream
+        Y.later(0, this, function() {
+            this.fire(E_START);
+        });
+    },
+
+    _fireFailEvent: function() {
+        // fire it later to avoid triggering 'fail' when initiating stream
+        Y.later(0, this, function() {
+            this.fire(E_FAIL);
+        });
     },
 
     _reconnect: function() {
         this._endStream();
         this._initStream();
         this.fire(E_RECONNECT);
-    }
+    },
 
     _parseResponse: function(responseText) {
         this._succeedToConnect();
@@ -203,7 +234,6 @@ CometStream.prototype = {
             size = Number('0x' + Y.Lang.trim(sizeLine));
 
             if (window.isNaN(size)) {
-                Y.log('wrong format');
                 this.fire(E_INVALID_FORMAT);
                 this._endStream();
                 return;
