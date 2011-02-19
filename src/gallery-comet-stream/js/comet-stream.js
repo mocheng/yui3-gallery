@@ -1,9 +1,9 @@
-/**
+/*
  *
  * @module gallery-comet-stream
  */
 
-/**
+/*
  * readyState possible value.
  * http://www.quirksmode.org/blog/archives/2005/09/xmlhttp_notes_r_2.html
  */
@@ -20,16 +20,57 @@ var READY_STATE = {
     COMPLETED: 4 // Finished with all operations.
 };
 
+/**
+ * @class CometStream
+ */
+
+/**
+ * @event cometStream:start
+ * @description This event is fired when stream is started.
+ * @type Event Custom
+ */
+var E_START = 'cometStream:start';
+
+/**
+ * @event cometStream:fail
+ * @description This event is fired when stream fails to be connected.
+ * @type Event Custom
+ */
+var E_FAIL = 'cometStream:fail';
+
+
+/**
+ * @event cometStream:pushed
+ * @description This event is fired when message is pushed in the stream.
+ * @type Event Custom
+ */
+var E_PUSHED = 'cometStream:pushed';
+
+/**
+ * @event cometStream:reconnect
+ * @description This event is fired when stream connection is reconnected.
+ * @type Event Custom
+ */
+var E_RECONNECT = 'cometStream:reconnect';
+
+/**
+ * @event cometStream:invalid
+ * @description This event is fired when server pushed message violate message format.
+ * @type Event Custom
+ */
+var E_INVALID_FORMAT= 'cometStream:invalidFormat';
+
 function CometStream(url, cfg) {
-    Y.Event.Target.call(this);
+    CometStream.superclass.constructor.call(this);
 
     this.url = url;
 
     this.cfg = Y.merge({
         on: {}, // on events
+        connectTimeout: 20 * 1000, // timeout to create stream connection
         resetTimeout: 300 * 1000, // in server-stream mode, the connection is reset every given seconds to avoid memory leak
         retryOnDisconnect: true, // whether to retry on HTTP dis-connected
-        xhrPollingInterval: 50 // xhr polling internal for Opera
+        xhrPollingInterval: 50 // xhr polling internal(milliseconds) for Opera
     }, cfg);
 
     this._initStream();
@@ -40,12 +81,8 @@ CometStream.prototype = {
         var xhr,
             that = this;
 
-        /**
+        /*
          * Last pushed data index which is to track newly pushed data start point.
-         *
-         * @type int
-         * @property _lastMsgIdx
-         * @private 
          */
         this._lastMsgIdx = 0;
 
@@ -66,7 +103,20 @@ CometStream.prototype = {
             xhr.send();
         }
 
+        this._failTimer = Y.later(this.cfg.connectTimeout, this, this._failTimeout, null);
+
         this._streamStartTime = new Date();
+    },
+
+    _failTimeout: function() {
+        this.fire(E_FAIL);
+        this._failTimer = null;
+    },
+
+    _succeedToConnect: function() {
+        if (this._failTimer) {
+            this._failTimer.cancel();
+        }
     },
 
     _endStream: function() {
@@ -97,13 +147,12 @@ CometStream.prototype = {
             return;
         }
 
-        //TODO: handle situation: server end response, server no response.
-
-        try {
-            status = xhr.status;
-        } catch (e) {
+        if (xhr.readyState < READY_STATE.INTERACTIVE) {
             //Opera throw exception if we check xhr.status when readyState < INTERACTIVE
+            return;
         }
+
+        status = xhr.status;
 
         if (status === 200) {
             if (xhr.readyState === READY_STATE.INTERACTIVE) {
@@ -125,12 +174,15 @@ CometStream.prototype = {
                     this._initStream();
                 }
             }
+        } else {
+            this.fire(E_FAIL);
         }
     },
 
     _parseResponse: function(responseText) {
+        this._succeedToConnect();
+
         // Browser doesn't expose chunked structure to us. So, we have to build chunked data based on HTTP trunked data.
-        //
         while (true) {
             var msg, msgStartPos, msgEndPos,
                 sizeStartPos, sizeEndPos, sizeLine, size;
@@ -145,9 +197,9 @@ CometStream.prototype = {
 
             if (window.isNaN(size)) {
                 Y.log('wrong format');
-                //TODO: reconnect?
+                this.fire(E_INVALID_FORMAT);
                 this._endStream();
-                throw new Error('wrong fomat');
+                return;
             }
 
             msgStartPos = sizeEndPos + 2; //pass '\r\n'
@@ -171,7 +223,7 @@ CometStream.prototype = {
     },
 
     _fireMessageEvent: function(msg) {
-        this.fire('comet:pushed', msg);
+        this.fire(E_PUSHED, msg);
 
         if (this.cfg.on.pushed) {
             this.cfg.on.pushed(msg);
@@ -199,7 +251,7 @@ CometStream.prototype = {
         iframeDiv.innerHTML = '<iframe src="' + url + '"></iframe>';
     },
 
-    /**
+    /*
      * create an XMLHttpRequest according to current browser.
      *
      * @method _createXHR
