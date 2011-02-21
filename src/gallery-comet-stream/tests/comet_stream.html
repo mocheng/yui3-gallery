@@ -39,7 +39,7 @@ YUI({
                 connectTimeout: 1500
             });
 
-            this.comet.on("cometStream:fail", Y.bind(function(event) {
+            this.comet.on("fail", Y.bind(function(event) {
                 this.resume(function(){ });
             }, this));
 
@@ -51,7 +51,7 @@ YUI({
                 connectTimeout: 1500
             });
 
-            this.comet.on("cometStream:invalidFormat", Y.bind(function(event) {
+            this.comet.on("invalidFormat", Y.bind(function(event) {
                 this.resume(function(){ });
             }, this));
 
@@ -74,7 +74,7 @@ YUI({
                 connectTimeout: 1500
             });
 
-            this.comet.on("cometStream:pushed", Y.bind(function(msg) {
+            this.comet.on("pushed", Y.bind(function(msg) {
                 var that = this;
                 this.resume(function(){
                     Y.Assert.areEqual('Hello World', msg);
@@ -90,7 +90,7 @@ YUI({
                 resetTimeout: 1000
             });
 
-            this.comet.on("cometStream:reconnect", Y.bind(function(msg) {
+            this.comet.on("reconnect", Y.bind(function(msg) {
                 this.resume(function(){
                 });
             }, this));
@@ -104,7 +104,7 @@ YUI({
             });
 
             var idx = 0;
-            this.comet.on("cometStream:pushed", Y.bind(function(msg) {
+            this.comet.on("pushed", Y.bind(function(msg) {
                 var that = this;
                 this.resume(function(){
                     Y.Assert.areEqual(idx + ': Hello World', msg);

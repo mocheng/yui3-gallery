@@ -25,39 +25,39 @@ var READY_STATE = {
  */
 
 /**
- * @event cometStream:start
+ * @event start
  * @description This event is fired when stream is started.
  * @type Event Custom
  */
-E_START = 'cometStream:start',
+E_START = 'start',
 
 /**
- * @event cometStream:fail
+ * @event fail
  * @description This event is fired when stream fails to be connected.
  * @type Event Custom
  */
-E_FAIL = 'cometStream:fail',
+E_FAIL = 'fail',
 
 /**
- * @event cometStream:pushed
+ * @event pushed
  * @description This event is fired when message is pushed in the stream.
  * @type Event Custom
  */
-E_PUSHED = 'cometStream:pushed',
+E_PUSHED = 'pushed',
 
 /**
- * @event cometStream:reconnect
+ * @event reconnect
  * @description This event is fired when stream connection is reconnected.
  * @type Event Custom
  */
-E_RECONNECT = 'cometStream:reconnect',
+E_RECONNECT = 'reconnect',
 
 /**
- * @event cometStream:invalid
+ * @event invalidFormat
  * @description This event is fired when server pushed message violate message format.
  * @type Event Custom
  */
-E_INVALID_FORMAT= 'cometStream:invalidFormat';
+E_INVALID_FORMAT= 'invalidFormat';
 
 function CometStream(url, cfg) {
     CometStream.superclass.constructor.call(this);
