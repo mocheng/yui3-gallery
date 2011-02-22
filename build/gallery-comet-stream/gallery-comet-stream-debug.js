@@ -35,35 +35,14 @@ E_RECONNECT = 'reconnect',
 E_INVALID_FORMAT= 'invalidFormat';
 
 /**
- *
  * @class CometStream
  * @description CometStream class
  * @constructor
  * @extends EventTarget
- * @param url {String} the stream URL
  * @param cfg {Object} configuration object
  */
-function CometStream(url, cfg) {
-    CometStream.superclass.constructor.call(this);
-
-    this.url = url;
-
-    this.cfg = Y.merge({
-        on: {}, // on events
-        connectTimeout: 20 * 1000, // timeout to create stream connection
-        resetTimeout: 300 * 1000, // in server-stream mode, the connection is reset every given seconds to avoid memory leak
-        retryOnDisconnect: true, // whether to retry on HTTP dis-connected
-        xhrPollingInterval: 50 // xhr polling internal(milliseconds) for Opera
-    }, cfg);
-
-    /**
-     * @event fail
-     * @description This event is fired when stream fails to be connected.
-     * @type Event Custom
-     */
-    this.publish(E_FAIL, {
-        fireOnce: true
-    });
+function CometStream(cfg) {
+    CometStream.superclass.constructor.apply(this, arguments);
 
     /**
      * @event start
@@ -71,9 +50,103 @@ function CometStream(url, cfg) {
      * @type Event Custom
      */
     this.publish(E_START, {
-        fireOnce: true
+        emitFacade: true
+    });
+
+    /**
+     * @event fail
+     * @description This event is fired when stream fails to be connected.
+     * @type Event Custom
+     */
+    this.publish(E_FAIL, {
+        fireOnce: true,
+        emitFacade: true
+    });
+
+    /**
+     * @event pushed
+     * @description This event is fired when message is pushed in the stream.
+     * @type Event Custom
+     */
+    this.publish(E_PUSHED, {
+        emitFacade: true
+    });
+
+    /**
+     * @event reconnect
+     * @description This event is fired when stream connection is reconnected.
+     * @type Event Custom
+     */
+    this.publish(E_RECONNECT, {
+        emitFacade: true
+    });
+
+    /**
+     * @event invalidFormat
+     * @description This event is fired when server pushed message violate message format.
+     * @type Event Custom
+     */
+    this.publish(E_INVALID_FORMAT, {
+        emitFacade: true
     });
 }
+
+CometStream.NAME = 'cometStream';
+
+CometStream.ATTRS = {
+    /**
+     * Stream URL
+     *
+     * @attribute url
+     * @type String
+     */
+    url: {
+    },
+
+    /**
+     * Timeout to create stream connection in milliseconds
+     *
+     * @attribute connectTimeout
+     * @default 20000
+     * @type Number
+     */
+    connectTimeout: {
+        value: 20 * 1000
+    },
+
+    /**
+     * Stream connection is reset every given seconds to avoid memory leak.
+     *
+     * @attribute resetTimeout
+     * @default 20000
+     * @type Number
+     */
+    resetTimeout: {
+        value: 300 * 1000
+    },
+
+    /**
+     * Whether to retry on HTTP dis-connected.
+     *
+     * @attribute resetTimeout
+     * @default true
+     * @type Boolean
+     */
+     retryOnDisconnect: {
+         value: true
+     },
+
+     /*
+      * XHR polling internal(milliseconds) for Opera
+      *
+      * @attribute operaXhrPollingInterval
+      * @default 50
+      * @type Number
+      */
+     operaXhrPollingInterval: {
+         value: 50
+     }
+};
 
 CometStream.prototype = {
 
@@ -91,6 +164,7 @@ CometStream.prototype = {
      */
     close: function() {
         this._endStream();
+        this._closed = true;
     },
 
     _initStream: function() {
@@ -103,7 +177,7 @@ CometStream.prototype = {
         this._lastMsgIdx = 0;
 
         if (Y.UA.ie) {
-            this._createIFrame(this.url, function(data) { 
+            this._createIFrame(this.get('url'), function(data) { 
                 if (that.cfg.on.pushed) {
                     that.cfg.on.pushed(data);
                 }
@@ -116,19 +190,19 @@ CometStream.prototype = {
                 that._onXhrStreamStateChange();
             };
 
-            xhr.open('GET', this.url, true);
+            xhr.open('GET', this.get('url'), true);
 
             xhr.send();
         }
 
-        this._failTimer = Y.later(this.cfg.connectTimeout, this, this._failTimeout, null);
+        this._failTimer = Y.later(this.get('connectTimeout'), this, this._failTimeout, null);
         this._streamStartTime = new Date();
 
         this._fireStartEvent();
     },
 
     _failTimeout: function() {
-        this._fireFailEvent();
+        this.fire(E_FAIL);
         this._failTimer = null;
         this._endStream();
     },
@@ -179,7 +253,7 @@ CometStream.prototype = {
                 // For Opera, it doesn't trigger INTERACTIVE ready state for each pushed data. So, we have to do polling.
                 //
                 if (Y.UA.opera) {
-                    this._pollHandler = Y.later(this.cfg.xhrPollingInterval, this, this._pollResponse, null, true);
+                    this._pollHandler = Y.later(this.get('operaXhrPollingInterval'), this, this._pollResponse, null, true);
                 } else {
                     this._parseResponse(xhr.responseText);
                 }
@@ -189,40 +263,26 @@ CometStream.prototype = {
                     this._pollResponse();
                 }
 
-                if (this.cfg.retryOnDisconnect) {
+                if (this.get('retryOnDisconnect')) {
                     this._reconnect();
                 }
             }
         } else {
-            this._fireFailEvent();
+            this.fire(E_FAIL);
         }
     },
 
     _fireStartEvent: function() {
-        // fire it later to avoid triggering 'fail' when initiating stream
-        Y.later(0, this, function() {
-            this.fire(E_START);
-        });
-    },
-
-    _fireFailEvent: function() {
-        // fire it later to avoid triggering 'fail' when initiating stream
-        Y.later(0, this, function() {
-            this.fire(E_FAIL);
-        });
+        this.fire(E_START);
     },
 
     _reconnect: function() {
         this._endStream();
 
-        /**
-         * @event reconnect
-         * @description This event is fired when stream connection is reconnected.
-         * @type Event Custom
-         */
-        this.fire(E_RECONNECT);
-
-        this._initStream();
+        if (!this._closed) {
+            this.fire(E_RECONNECT);
+            this._initStream();
+        }
     },
 
     _parseResponse: function(responseText) {
@@ -242,11 +302,6 @@ CometStream.prototype = {
             size = Number('0x' + Y.Lang.trim(sizeLine));
 
             if (window.isNaN(size)) {
-                /**
-                 * @event invalidFormat
-                 * @description This event is fired when server pushed message violate message format.
-                 * @type Event Custom
-                 */
                 this.fire(E_INVALID_FORMAT);
                 this._endStream();
                 return;
@@ -266,22 +321,13 @@ CometStream.prototype = {
             this._fireMessageEvent(msg);
         }
 
-        if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.cfg.resetTimeout) {
+        if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.get('resetTimeout')) {
             this._reconnect();
         }
     },
 
     _fireMessageEvent: function(msg) {
-        /**
-         * @event pushed
-         * @description This event is fired when message is pushed in the stream.
-         * @type Event Custom
-         */
-        this.fire(E_PUSHED, msg);
-
-        if (this.cfg.on.pushed) {
-            this.cfg.on.pushed(msg);
-        }
+        this.fire(E_PUSHED, {data: msg});
     },
 
     _createIFrame: function(url, callback) {
@@ -335,9 +381,9 @@ CometStream.prototype = {
     }
 };
 
-Y.extend(CometStream, Y.Event.Target, CometStream.prototype);
+Y.extend(CometStream, Y.Base, CometStream.prototype);
 
 Y.CometStream = CometStream;
 
 
-}, '@VERSION@' ,{requires:['event-base','event-custom']});
+}, '@VERSION@' ,{requires:['base']});

@@ -50,29 +50,30 @@ YUI().use('node', 'gallery-comet-stream', function(Y) {
 
     var streamUrl = 'stream_source.php';
 
-    var streamClient = new Y.CometStream(streamUrl, {
+    var streamClient = new Y.CometStream({
+            url: streamUrl,
             on: {
                 //start:
                 //end:
-                pushed: function(data) {
-                    Y.log(data);
+                pushed: function(ev) {
+                    Y.log(ev);
                     //node.set('innerHTML', data + '<br/>' + node.get('innerHTML'));
-                    node1.set('innerHTML', data);
+                    node1.set('innerHTML', ev.data);
                 }
             }
         });
     streamClient.start();
 
-    // need a way to cheat Firefox to believe it is a different URL
-    var streamClient2 = new Y.CometStream(streamUrl + "?2", {
+    var streamClient2 = new Y.CometStream({
+            url: streamUrl + "?2", // need a way to cheat Firefox to believe it is a different URL
             resetTimeout: 5000,
             on: {
                 //start:
                 //end:
-                pushed: function(data) {
-                    Y.log(data);
+                pushed: function(ev) {
+                    Y.log(ev);
                     //node.set('innerHTML', data + '<br/>' + node.get('innerHTML'));
-                    node2.set('innerHTML', data);
+                    node2.set('innerHTML', ev.data);
                 }
             }
         });

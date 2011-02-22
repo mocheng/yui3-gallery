@@ -91,10 +91,11 @@ YUI().use('node', 'dial', 'io', 'gallery-comet-stream', function(Y) {
 
     var stockValue = 16.4;
 
-    var streamClient = new Y.CometStream(streamUrl, {
+    var streamClient = new Y.CometStream({
+            url: streamUrl,
             on: {
-                pushed: function(data) {
-                    var newVal = Number(data);
+                pushed: function(ev) {
+                    var newVal = Number(ev.data);
                     if (!isNaN(newVal)) {
                         stockValue = newVal;
                         stock.set('innerHTML', newVal);
