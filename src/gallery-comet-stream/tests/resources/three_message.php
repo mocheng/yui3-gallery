@@ -17,7 +17,7 @@ for ($i = 0; $i < 3; ++$i) {
     $words = ($i . ': Hello World');
 
     if ($isIE) {
-        echo '<script type="text/javascript">parent.callback("' . $words. '")</script>';
+        echo '<script type="text/javascript">parent.push("' . $words. '")</script>';
     } else {
         $len = dechex(strlen($words));
         $data = "{$len}\r\n{$words}\r\n";

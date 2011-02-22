@@ -17,7 +17,7 @@ function respondChunk(response, chunk) {
     chunk = chunk.toString();
     var len = chunk.length.toString(16);
     if (response.isIE) {
-        response.write('<script type="text/javascript">parent.callback("' + chunk + '")</script>');
+        response.write('<script type="text/javascript">parent.push("' + chunk + '")</script>');
     } else {
         response.write(len + "\r\n" + chunk + "\r\n");
     }

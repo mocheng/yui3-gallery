@@ -16,7 +16,7 @@ header("Cache-control: no-cache");
 $words = 'Hello World';
 
 if ($isIE) {
-    echo '<script type="text/javascript">parent.callback("' . $words. '")</script>';
+    echo '<script type="text/javascript">parent.push("' . $words. '")</script>';
 } else {
     $len = dechex(strlen($words));
     $data = "{$len}\r\n{$words}\r\n";

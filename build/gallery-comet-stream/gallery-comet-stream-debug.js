@@ -343,7 +343,7 @@ CometStream.prototype = {
         this.transDoc.write('<html></html>');
         this.transDoc.close();
 
-        this.transDoc.parentWindow.callback = callback;
+        this.transDoc.parentWindow.push = callback;
         this.transDoc.parentWindow.mo = 'mo';
 
         var iframeDiv = this.transDoc.createElement('div');
