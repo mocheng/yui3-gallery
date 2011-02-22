@@ -61,6 +61,7 @@ YUI().use('node', 'gallery-comet-stream', function(Y) {
                 }
             }
         });
+    streamClient.start();
 
     // need a way to cheat Firefox to believe it is a different URL
     var streamClient2 = new Y.CometStream(streamUrl + "?2", {
@@ -75,6 +76,8 @@ YUI().use('node', 'gallery-comet-stream', function(Y) {
                 }
             }
         });
+
+    streamClient2.start();
 
 });
         </script>

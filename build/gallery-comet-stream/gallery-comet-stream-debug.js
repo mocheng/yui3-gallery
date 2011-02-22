@@ -1,6 +1,8 @@
 YUI.add('gallery-comet-stream', function(Y) {
 
 /*
+ * Provides Server Streaming client functionality.
+ * Currently, it supports XHR streaming and forever iframe streaming.
  *
  * @module gallery-comet-stream
  */
@@ -22,45 +24,25 @@ var READY_STATE = {
     COMPLETED: 4 // Finished with all operations.
 },
 
-/**
- * @class CometStream
- */
-
-/**
- * @event start
- * @description This event is fired when stream is started.
- * @type Event Custom
- */
 E_START = 'start',
 
-/**
- * @event fail
- * @description This event is fired when stream fails to be connected.
- * @type Event Custom
- */
 E_FAIL = 'fail',
 
-/**
- * @event pushed
- * @description This event is fired when message is pushed in the stream.
- * @type Event Custom
- */
 E_PUSHED = 'pushed',
 
-/**
- * @event reconnect
- * @description This event is fired when stream connection is reconnected.
- * @type Event Custom
- */
 E_RECONNECT = 'reconnect',
 
-/**
- * @event invalidFormat
- * @description This event is fired when server pushed message violate message format.
- * @type Event Custom
- */
 E_INVALID_FORMAT= 'invalidFormat';
 
+/**
+ *
+ * @class CometStream
+ * @description CometStream class
+ * @constructor
+ * @extends EventTarget
+ * @param url {String} the stream URL
+ * @param cfg {Object} configuration object
+ */
 function CometStream(url, cfg) {
     CometStream.superclass.constructor.call(this);
 
@@ -74,18 +56,43 @@ function CometStream(url, cfg) {
         xhrPollingInterval: 50 // xhr polling internal(milliseconds) for Opera
     }, cfg);
 
+    /**
+     * @event fail
+     * @description This event is fired when stream fails to be connected.
+     * @type Event Custom
+     */
     this.publish(E_FAIL, {
         fireOnce: true
     });
 
+    /**
+     * @event start
+     * @description This event is fired when stream is started.
+     * @type Event Custom
+     */
     this.publish(E_START, {
         fireOnce: true
     });
-
-    this._initStream();
 }
 
 CometStream.prototype = {
+
+    /**
+     * @method start
+     * @description start this stream.
+     */
+    start: function() {
+        this._initStream();
+    },
+
+    /**
+     * @method close
+     * @description close this stream.
+     */
+    close: function() {
+        this._endStream();
+    },
+
     _initStream: function() {
         var xhr,
             that = this;
@@ -130,14 +137,6 @@ CometStream.prototype = {
         if (this._failTimer) {
             this._failTimer.cancel();
         }
-    },
-
-    /**
-     * @method close
-     * @description close this stream.
-     */
-    close: function() {
-        this._endStream();
     },
 
     _endStream: function() {
@@ -215,8 +214,15 @@ CometStream.prototype = {
 
     _reconnect: function() {
         this._endStream();
-        this._initStream();
+
+        /**
+         * @event reconnect
+         * @description This event is fired when stream connection is reconnected.
+         * @type Event Custom
+         */
         this.fire(E_RECONNECT);
+
+        this._initStream();
     },
 
     _parseResponse: function(responseText) {
@@ -236,6 +242,11 @@ CometStream.prototype = {
             size = Number('0x' + Y.Lang.trim(sizeLine));
 
             if (window.isNaN(size)) {
+                /**
+                 * @event invalidFormat
+                 * @description This event is fired when server pushed message violate message format.
+                 * @type Event Custom
+                 */
                 this.fire(E_INVALID_FORMAT);
                 this._endStream();
                 return;
@@ -261,6 +272,11 @@ CometStream.prototype = {
     },
 
     _fireMessageEvent: function(msg) {
+        /**
+         * @event pushed
+         * @description This event is fired when message is pushed in the stream.
+         * @type Event Custom
+         */
         this.fire(E_PUSHED, msg);
 
         if (this.cfg.on.pushed) {
@@ -289,12 +305,6 @@ CometStream.prototype = {
         iframeDiv.innerHTML = '<iframe src="' + url + '"></iframe>';
     },
 
-    /*
-     * create an XMLHttpRequest according to current browser.
-     *
-     * @method _createXHR
-     * @return XMLHttpRequest XHR instance
-     */
     _createXHR: function() {
         var xhrObj = null;
 
@@ -306,6 +316,7 @@ CometStream.prototype = {
             //
             // NOTE: Actually, we cannot implement comet with IE XHR since it doesn't trigger readyState===INTERACTIVE state in progress.
             // I keep below code for Long-Poll(perhaps in the future)
+            /*
             try {
                 xhrObj = new window.ActiveXObject('Msxml2.XMLHTTP');
             } catch (e1) {
@@ -315,6 +326,7 @@ CometStream.prototype = {
                     xhrObj = null;
                 }
             }
+            */
         }
         if (!xhrObj) {
             throw new Error('XMLHttpRequest is not supported');
