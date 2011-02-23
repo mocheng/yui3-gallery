@@ -37,19 +37,28 @@ document {
 
         </style>
     </head>
-    <body class="yui-skin-sam">
+    <body class="yui3-skin-sam">
         <div id='container'>
-            <div class='touch-target' id='demo1'>Watch Me</div>
+            <!--<div class='touch-target' id='demo1'>Watch Me</div>-->
             <div class='touch-target' id='demo2'>Watch Me</div>
         </div>
+        <div id='console'></div>
 
         <script type="text/javascript" charset="utf-8">
-YUI().use('node', 'gallery-comet-stream', function(Y) {
+YUI().use('node', 'console', 'gallery-comet-stream', function(Y) {
+    var report = new Y.Console({
+        verbose : true,
+        //consoleLimit : 10,
+        newestOnTop : false
+    });
+    report.render('#console');
+
     var node1 = Y.one('#demo1');
     var node2 = Y.one('#demo2');
 
     var streamUrl = 'stream_source.php';
 
+    /*
     var streamClient = new Y.CometStream({
             url: streamUrl,
             on: {
@@ -63,6 +72,7 @@ YUI().use('node', 'gallery-comet-stream', function(Y) {
             }
         });
     streamClient.start();
+    */
 
     var streamClient2 = new Y.CometStream({
             url: streamUrl + "?2", // need a way to cheat Firefox to believe it is a different URL
@@ -71,7 +81,6 @@ YUI().use('node', 'gallery-comet-stream', function(Y) {
                 //start:
                 //end:
                 pushed: function(ev) {
-                    Y.log(ev);
                     //node.set('innerHTML', data + '<br/>' + node.get('innerHTML'));
                     node2.set('innerHTML', ev.data);
                 }
@@ -79,6 +88,7 @@ YUI().use('node', 'gallery-comet-stream', function(Y) {
         });
 
     streamClient2.start();
+
 
 });
         </script>

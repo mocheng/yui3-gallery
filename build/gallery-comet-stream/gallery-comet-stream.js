@@ -177,12 +177,7 @@ CometStream.prototype = {
         this._lastMsgIdx = 0;
 
         if (Y.UA.ie) {
-            this._createIFrame(this.get('url'), function(data) { 
-                if (that.cfg.on.pushed) {
-                    that.cfg.on.pushed(data);
-                }
-            });
-
+            this._createIFrame(this.get('url'), Y.bind(this._onPushedMsgFromIFrame, this));
         } else {
             xhr = this.xhr = this._createXHR();
 
@@ -197,6 +192,8 @@ CometStream.prototype = {
 
         this._failTimer = Y.later(this.get('connectTimeout'), this, this._failTimeout, null);
         this._streamStartTime = new Date();
+
+        Y.later(this.get('resetTimeout'), this, this._reconnect);
 
         this._fireStartEvent();
     },
@@ -215,6 +212,7 @@ CometStream.prototype = {
 
     _endStream: function() {
         if (this.transDoc) {
+            this.iframeDiv.innerHTML = '';
             this.transDoc = null; // Let it be GC-ed
         }
 
@@ -320,10 +318,13 @@ CometStream.prototype = {
 
             this._fireMessageEvent(msg);
         }
+    },
 
-        if ((new Date()).getTime() - this._streamStartTime.getTime() >= this.get('resetTimeout')) {
-            this._reconnect();
-        }
+    _onPushedMsgFromIFrame: function(msg) {
+        // iframe channel should pushed down some message on connection success so that client knows the channel is alive. 
+        this._succeedToConnect();
+
+        this._fireMessageEvent(msg);
     },
 
     _fireMessageEvent: function(msg) {
@@ -331,24 +332,30 @@ CometStream.prototype = {
     },
 
     _createIFrame: function(url, callback) {
+        var m;
+
         // Don't let transDoc be GC-ed.
         this.transDoc = new window.ActiveXObject('htmlfile');
         this.transDoc.open();
 
         // Don't assign domain if same. It will break in IE8.
         //
-        if (url.match(/^http.?:\/\/([^\/]+)\/?/)[1] !== window.document.domain) {
+        m = url.match(/^http.?:\/\/([^\/]+)\/?/);
+        if (m && (m[1] !== window.document.domain)) {
             this.transDoc.write('<html><script type="text/javascript">document.domain="' + window.document.domain + '";</script></html>');
         }
         this.transDoc.write('<html></html>');
         this.transDoc.close();
 
+        // TODO:
+        // This makes only one instance of CometStream instance allwoed in in one page. Otherwise multiple iframe channel will conflicts
+        // in callback. Perhaps we can specify callback method or channel id name in iframe URL query string.
+        //
         this.transDoc.parentWindow.push = callback;
-        this.transDoc.parentWindow.mo = 'mo';
 
-        var iframeDiv = this.transDoc.createElement('div');
-        this.transDoc.body.appendChild(iframeDiv);
-        iframeDiv.innerHTML = '<iframe src="' + url + '"></iframe>';
+        this.iframeDiv = this.transDoc.createElement('div');
+        this.transDoc.body.appendChild(this.iframeDiv);
+        this.iframeDiv.innerHTML = '<iframe src="' + url + '"></iframe>';
     },
 
     _createXHR: function() {

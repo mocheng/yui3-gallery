@@ -5,8 +5,8 @@ $isIE = (strpos($_SERVER['HTTP_USER_AGENT'], 'MSIE') !== FALSE);
 if ($isIE) {
     header('Content-Type: text/html');
 
-    // necessary, since IE will buffer 256 bytes before rendering
-    echo str_repeat('#', 256);
+    // necessary, since IE will buffer 1K before rendering
+    echo str_repeat('#', 1024);
 }
 else {
     header('Content-Type: application/json');

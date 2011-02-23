@@ -47,7 +47,7 @@ YUI({
 
             this.comet.start();
 
-            this.wait(3000);
+            this.wait(5000);
         },
 
         test_response_without_200_status_code_should_cause_fail: function() {
@@ -65,9 +65,27 @@ YUI({
             this.comet.start();
 
             this.wait(3000);
+        }
+
+    });
+
+    var invalidFormatTestCases = new Y.Test.Case({
+        name: 'pushed event cases',
+
+        setUp: function() { },
+
+        tearDown: function(){
+            this.comet.close();
+            this.comet = null;
         },
 
         test_response_with_invalid_format_should_cause_invalidFormat_event: function() {
+            if (Y.UA.ie) {
+                // only XHR streaming migh trigger invalidFormat
+                Y.Assert.isTrue(true, 'this test is skipped');
+                return;
+            }
+
             var tc = this;
             this.comet = new Y.CometStream({
                 url: 'resources/invalid_stream.php',
@@ -109,7 +127,7 @@ YUI({
 
             this.comet.start();
 
-            this.wait(3000);
+            this.wait(5000);
         },
 
         test_response_with_three_message_should_trigger_pushed_event_three_times: function() {
@@ -120,6 +138,7 @@ YUI({
 
             var idx = 0;
             this.comet.on("pushed", Y.bind(function(e) {
+                Y.log(e.data);
                 var that = this;
                 this.resume(function(){
                     Y.Assert.areEqual(idx + ': Hello World', e.data);
@@ -133,7 +152,7 @@ YUI({
 
             this.comet.start();
 
-            this.wait(3000);
+            this.wait(5000);
         }
     });
 
@@ -199,7 +218,7 @@ YUI({
 
             this.comet.start();
 
-            this.wait(5000);
+            this.wait(10000);
         }
     });
 
@@ -212,6 +231,9 @@ YUI({
 
     testSuite.add(errorTestCases);
     testSuite.add(pushedEventTestCases);
+    if (!Y.UA.ie) {
+        testSuite.add(invalidFormatTestCases);
+    }
     testSuite.add(reconnectTestCases);
 
     Y.Test.Runner.add(testSuite);
