@@ -392,5 +392,4 @@ Y.extend(CometStream, Y.Base, CometStream.prototype);
 
 Y.CometStream = CometStream;
 
-
-}, '@VERSION@' ,{requires:['base']});
+}, 'gallery-2011.02.23-19-01' ,{requires:['base']});
