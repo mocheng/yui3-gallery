@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,user-scalable=no">
+
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <title>Test</title>
+
+        <!--for local dev without WIFI -->
+        <!--
+        <script type="text/javascript" src="http://localhost/3.3.0/build/yui/yui-min.js"></script>
+        <script type="text/javascript" src="http://localhost/yui3-gallery/build/gallery-comet-stream/gallery-comet-stream.js"></script>
+        -->
+
+        <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js&3.3.0/build/loader/loader-min.js"></script>
+
+        <style type="text/css" media="screen">
+#example-canvas { /* for YDN */
+    height: 250px;
+}
+
+document {
+    position: relative;
+}
+
+#container {
+    margin: 20px auto;
+    width: 400px;
+}
+
+#chat_history{
+    height: 6em;
+    width: 400px;
+    overflow-y: scroll;
+    border: 1px solid gray;
+    margin: 4px;
+}
+
+#chat_box {
+    margin: 4px;
+    width: 400px;
+    height: 4em;
+}
+        </style>
+    </head>
+    <body class="yui3-skin-sam yui-skin-sam">
+        <div id='container'>
+            <div id='chat_history'></div>
+            <textarea id='chat_box'></textarea>
+        </div>
+
+        <script type="text/javascript" charset="utf-8">
+YUI({
+    gallery: 'gallery-2011.02.23-19-01'
+}).use('node', 'io', 'event-valuechange', 'querystring-stringify-simple', 'gallery-comet-stream', 
+        function(Y) {
+    var chatHistory = Y.one('#chat_history');
+    var chatBox = Y.one('#chat_box');
+
+    chatBox.on('valueChange', function(e) {
+        //Y.log(e.newVal);
+    });
+
+    chatBox.on('key', function(e) {
+        if(!e.shiftKey) {
+            //Y.log('enter key');
+            e.halt();
+
+            Y.io('/chat/send', {
+                method: 'POST',
+                data: {
+                    msg: chatBox.get('value')
+                }
+            });
+
+            chatBox.set('value', '');
+        }
+    }, 'down:13');
+
+    var streamUrl = '/chat/subscribe';
+
+    var streamClient = new Y.CometStream({
+            url: streamUrl,
+            on: {
+                pushed: function(ev) {
+                    var newVal = Number(ev.data);
+                    Y.log('pushed:' + ev.data);
+
+                    //TODO: remove XSS theat
+                    chatHistory.append('<p>' + ev.data + '</p>');
+                }
+            },
+            resetTimeout: 10000
+        });
+    streamClient.start();
+
+
+});
+        </script>
+    </body>
+</html>
