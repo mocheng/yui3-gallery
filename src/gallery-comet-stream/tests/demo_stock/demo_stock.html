@@ -7,7 +7,6 @@
         <meta http-equiv="content-type" content="text/html; charset=utf-8">
         <title>Test</title>
         <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js&3.3.0/build/loader/loader-min.js"></script>
-        <script type="text/javascript" src="gallery-comet-stream-debug.js"></script>
         <style type="text/css" media="screen">
 #example-canvas { /* for YDN */
     height: 250px;
@@ -17,24 +16,12 @@ document {
     position: relative;
 }
 
-.touch-target {
-    font-size: 40px;
-    background: #ccc;
-    border: 4px solid #999;
-    height: 100%;
-    width: 300px;
-    overflow: hidden;
-    /*zoom: 1;*/
-    float: left;
-    padding-right: 30px;
-}
-
 #container {
     margin: 20px auto;
-    width: 600px;
+    width: 60%;
 }
 
-.stock {
+#yhoo-stock{
     font-size: 50px;
 }
 
@@ -42,70 +29,90 @@ document {
     margin: 0 auto;
 }
 
+.yui3-dial-label {
+    display: none;
+}
+
         </style>
     </head>
     <body class="yui3-skin-sam yui-skin-sam">
         <div id='container'>
-            <div class="stock" id="yhoo-stock">YHOO <span></span></div>
+            <div id="yhoo-stock">YHOO <span></span></div>
             <div id='dial'></div>
         </div>
 
 
         <script type="text/javascript" charset="utf-8">
-YUI().use('node', 'dial', 'io', 'gallery-comet-stream', function(Y) {
+YUI({
+    gallery: 'gallery-2011.02.23-19-01'
+}).use('node', 'dial', 'io', 'querystring-parse', 'gallery-comet-stream', function(Y) {
     var stock = Y.one('#yhoo-stock span');
-    var stockValue = 16.4;
+    var stockValue = 16.50;
     var publishHandler;
 
-    stock.set('innerHTML', stockValue);
+    var controllerMode;
+    if (Y.QueryString.parse(document.location.search.substr(1)).controller) {
+        controllerMode = true;
+    }
 
-    var dial = new Y.Dial({
-        min: 0,
-        max: 220000,
-        stepsPerRev: 100,
-        decimalPlaces: 2,
-        value: stockValue,
-        strings: {
-            label: "Stock Value:"
+    function setStockValue(newVal) {
+        stock.set('innerHTML', newVal);
+        if (stockValue < newVal) {
+            stock.setStyle('color', 'green');
+        } else {
+            stock.setStyle('color', 'red');
         }
-    });
+        stockValue = newVal;
+    }
 
-    dial.on('valueChange', function(e) {
-        Y.log('stockValue = ' + stockValue);
-        Y.log('e.newVal = ' + e.newVal);
-        if (stockValue != e.newVal) {
+    setStockValue(stockValue);
 
-            if (publishHandler) {
-                publishHandler.cancel();
+    if (controllerMode) {
+        var dial = new Y.Dial({
+            min: 0,
+            max: 220000,
+            stepsPerRev: 100,
+            decimalPlaces: 2,
+            value: stockValue,
+            strings: {
+                label: ''//"Stock Value:"
             }
-            publishHandler = Y.later(1, this, function() {
-                Y.io('/publish?val=' + e.newVal, {
-                    method: 'POST'
-                });
-            });
-        }
-    });
-    dial.render('#dial');
-
-    var streamUrl = '/subscribe/' + Math.random();
-
-    var stockValue = 16.4;
-
-    var streamClient = new Y.CometStream({
-            url: streamUrl,
-            on: {
-                pushed: function(ev) {
-                    var newVal = Number(ev.data);
-                    if (!isNaN(newVal)) {
-                        stockValue = newVal;
-                        stock.set('innerHTML', newVal);
-                        dial.set('value', newVal);
-                    }
-                }
-            },
-            resetTimeout: 10000
         });
-    streamClient.start();
+
+        dial.on('valueChange', function(e) {
+            //Y.log('stockValue = ' + stockValue);
+            //Y.log('e.newVal = ' + e.newVal);
+            if (stockValue != e.newVal) {
+
+                if (publishHandler) {
+                    publishHandler.cancel();
+                }
+                publishHandler = Y.later(1, this, function() {
+                    Y.io('/publish?val=' + e.newVal, {
+                        method: 'POST'
+                    });
+                });
+                setStockValue(e.newVal);
+            }
+        });
+        dial.render('#dial');
+    } else {
+        var streamUrl = '/subscribe/' + Math.random();
+
+        var streamClient = new Y.CometStream({
+                url: streamUrl,
+                on: {
+                    pushed: function(ev) {
+                        var newVal = Number(ev.data);
+                        if (!isNaN(newVal)) {
+                            setStockValue(newVal);
+                        }
+                    }
+                },
+                resetTimeout: 10000
+            });
+        streamClient.start();
+    }
 
     /*
     setInterval(function() {
