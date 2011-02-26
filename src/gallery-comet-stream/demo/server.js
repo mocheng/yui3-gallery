@@ -96,7 +96,14 @@ var chatRoomComet = cometStream.listen(server, {
 chatRoomComet.on('connection', function(client) {
     util.log('got one comet connection');
 
-    //client.push('first msg');
+    var urlParams = url.parse(client.request.url, true);
+    var userName = urlParams.query ? urlParams.query.user : "Unknown";
+    util.log(userName + " joins the chat");
+
+    client.push(JSON.stringify({
+        type: 'join',
+        user: userName
+    }));
     //TODO: push last 20 messages
 });
 
@@ -116,7 +123,19 @@ server.on('request', function(req, res) {
         });
         req.on('end', function() {
             util.log('got post msg: ' + postData);
-            chatRoomComet.broadcast(postData);
+
+            try {
+                var data = JSON.parse(postData);
+
+                if (data.msg) {
+                    chatRoomComet.broadcast(JSON.stringify({
+                        type: 'chat',
+                        text: data.msg
+                    }));
+                }
+            }catch(e) {
+                util.log('invalid post data: ' + postData);
+            }
         });
     }
 });

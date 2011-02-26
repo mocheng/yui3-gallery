@@ -36,6 +36,11 @@ document {
     margin: 4px;
 }
 
+#status {
+    width: 400px;
+    height: 2em;
+}
+
 #chat_box {
     margin: 4px;
     width: 400px;
@@ -46,14 +51,23 @@ document {
     <body class="yui3-skin-sam yui-skin-sam">
         <div id='container'>
             <div id='chat_history'></div>
+            <div id='status'></div>
             <textarea id='chat_box'></textarea>
         </div>
 
         <script type="text/javascript" charset="utf-8">
 YUI({
     gallery: 'gallery-2011.02.23-19-01'
-}).use('node', 'io', 'event-valuechange', 'querystring-stringify-simple', 'gallery-comet-stream', 
-        function(Y) {
+}).use('node', 'io', 'event-valuechange',
+'querystring-stringify-simple',
+'gallery-comet-stream',
+'json',
+function(Y) {
+    var userName;
+    while (!userName) {
+        userName = window.prompt("What's your name?", "");
+    }
+
     var chatHistory = Y.one('#chat_history');
     var chatBox = Y.one('#chat_box');
 
@@ -68,16 +82,15 @@ YUI({
 
             Y.io('/chat/send', {
                 method: 'POST',
-                data: {
-                    msg: chatBox.get('value')
-                }
+                data: Y.JSON.stringify({msg: chatBox.get('value')})
             });
 
             chatBox.set('value', '');
         }
     }, 'down:13');
 
-    var streamUrl = '/chat/subscribe?' + Math.random();
+    Y.log('user choose name: ' + userName);
+    var streamUrl = '/chat/subscribe?user=' + userName + "&" + Math.random();
 
     var streamClient = new Y.CometStream({
             url: streamUrl,
@@ -86,14 +99,24 @@ YUI({
                     var newVal = Number(ev.data);
                     Y.log('pushed:' + ev.data);
 
-                    //TODO: remove XSS theat
-                    chatHistory.prepend('<p>' + ev.data + '</p>');
+                    var msg = JSON.parse(ev.data);
+                    var text;
+                    switch (msg.type) {
+                        case 'join':
+                            text = msg.user + " joined the chat room";
+                            break;
+                        case 'chat':
+                            text = msg.text;
+                            break;
+                        default:
+                    }
+
+                    chatHistory.prepend('<p>' + text + '</p>');
                 }
             },
             resetTimeout: 10000
         });
     streamClient.start();
-
 
 });
         </script>
