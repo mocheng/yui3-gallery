@@ -77,7 +77,7 @@ YUI({
         }
     }, 'down:13');
 
-    var streamUrl = '/chat/subscribe';
+    var streamUrl = '/chat/subscribe?' + Math.random();
 
     var streamClient = new Y.CometStream({
             url: streamUrl,
@@ -87,7 +87,7 @@ YUI({
                     Y.log('pushed:' + ev.data);
 
                     //TODO: remove XSS theat
-                    chatHistory.append('<p>' + ev.data + '</p>');
+                    chatHistory.prepend('<p>' + ev.data + '</p>');
                 }
             },
             resetTimeout: 10000
