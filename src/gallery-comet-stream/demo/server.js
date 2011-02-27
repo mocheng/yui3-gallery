@@ -100,10 +100,17 @@ chatRoomComet.on('connection', function(client) {
     var userName = urlParams.query ? urlParams.query.user : "Unknown";
     util.log(userName + " joins the chat");
 
-    client.push(JSON.stringify({
-        type: 'join',
-        user: userName
-    }));
+    client.userName = userName;
+
+    util.log(util.inspect(urlParams));
+    util.log('reconnect?' + urlParams.query.reconnect);
+    if (!urlParams.query || !urlParams.query.reconnect) {
+        chatRoomComet.broadcast(JSON.stringify({
+            type: 'join',
+            user: userName
+        }));
+    }
+
     //TODO: push last 20 messages
 });
 
@@ -127,9 +134,10 @@ server.on('request', function(req, res) {
             try {
                 var data = JSON.parse(postData);
 
-                if (data.msg) {
+                if (data.msg && data.user) {
                     chatRoomComet.broadcast(JSON.stringify({
                         type: 'chat',
+                        user: data.user,
                         text: data.msg
                     }));
                 }

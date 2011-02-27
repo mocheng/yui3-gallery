@@ -36,6 +36,15 @@ document {
     margin: 4px;
 }
 
+#chat_history p {
+    padding: 0;
+    margin: 0;
+}
+
+#chat_history em {
+    font-weight: bold;
+}
+
 #status {
     width: 400px;
     height: 2em;
@@ -49,6 +58,7 @@ document {
         </style>
     </head>
     <body class="yui3-skin-sam yui-skin-sam">
+        <h2>Demo Chat Room</h2>
         <div id='container'>
             <div id='chat_history'></div>
             <div id='status'></div>
@@ -82,7 +92,10 @@ function(Y) {
 
             Y.io('/chat/send', {
                 method: 'POST',
-                data: Y.JSON.stringify({msg: chatBox.get('value')})
+                data: Y.JSON.stringify({
+                    user: userName,
+                    msg: chatBox.get('value')
+                })
             });
 
             chatBox.set('value', '');
@@ -106,17 +119,26 @@ function(Y) {
                             text = msg.user + " joined the chat room";
                             break;
                         case 'chat':
-                            text = msg.text;
+                            text = '<em>' + msg.user + "</em> : " + msg.text.replace(/\n/g, "<br/>");
                             break;
                         default:
                     }
 
                     chatHistory.prepend('<p>' + text + '</p>');
+                },
+                reconnect: function(ev) {
+                    var url = this.get('url');
+                    Y.log('url:' + url);
+                    if (url.indexOf('reconnect=1') == -1) {
+                        this.set('url', url + '&reconnect=1');
+                    }
                 }
             },
             resetTimeout: 10000
         });
     streamClient.start();
+
+    chatBox.focus();
 
 });
         </script>

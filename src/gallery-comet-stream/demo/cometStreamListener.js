@@ -1,6 +1,9 @@
-var url     = require('url'),
+var PADDING_LEN = 1024,
+
+    url     = require('url'),
     events  = require('events'),
     util    = require('util');
+
 
 //
 // util functions
@@ -30,7 +33,7 @@ function Client(req, res, comet) {
             'Content-Type': 'text/html'
         });
 
-        res.write(repeatStr('#', 1024)); // push 1K padding to start IE progressive rendering
+        res.write(repeatStr('#', PADDING_LEN)); // push 1K padding to start IE progressive rendering
     } else {
         res.writeHead(200, {
             'Content-Type': 'application/octet-stream'
@@ -91,6 +94,9 @@ util.inherits(CometStream, process.EventEmitter);
 
 CometStream.prototype._removeClient= function(clientId) {
     var client = this._clients[clientId];
+
+    this.emit('disconnection', client);
+
     if (client) {
         client.removeAllListeners();
         client.response.end();
