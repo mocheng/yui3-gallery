@@ -1,0 +1,52 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,user-scalable=no">
+
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <title>Test</title>
+        <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script>
+        <script type="text/javascript" src="../build_tmp/gallery-smart-loader-debug.js"></script>
+        <style type="text/css" media="screen">
+        </style>
+    </head>
+    <body class="yui3-skin-sam">
+        <div id="console"></div>
+
+        <script type="text/javascript" charset="utf-8">
+YUI({
+    //filter: 'raw',
+    //combine: false,
+}).use('gallery-smart-loader', 'console', 'test', function(Y) {
+
+    var testSuite = new Y.Test.Suite("Smart Loader Tests");
+
+    var errorTestCases = new Y.Test.Case({
+        name: 'Error cases',
+
+        setUp: function() { },
+
+        tearDown: function() {
+        },
+
+        test_something: function() {
+            Y.Assert.areEqual('node', Y.getDependent(['test']));
+        }
+
+    });
+
+    var report = new Y.Console({
+        verbose : true,
+        //consoleLimit : 10,
+        newestOnTop : false
+    });
+    report.render('#console');
+
+    testSuite.add(errorTestCases);
+
+    Y.Test.Runner.add(testSuite);
+    Y.Test.Runner.run();
+});
+        </script>
+    </body>
+</html>

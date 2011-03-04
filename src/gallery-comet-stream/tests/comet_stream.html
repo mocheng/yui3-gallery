@@ -5,8 +5,9 @@
 
         <meta http-equiv="content-type" content="text/html; charset=utf-8">
         <title>Test</title>
-        <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js&3.3.0/build/loader/loader-min.js"></script>
-        <script type="text/javascript" src="gallery-comet-stream-debug.js"></script>
+        <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script>
+        <!--<script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js&3.3.0/build/loader/loader-min.js"></script>-->
+        <!--<script type="text/javascript" src="gallery-comet-stream-debug.js"></script>-->
         <style type="text/css" media="screen">
         </style>
     </head>
@@ -19,8 +20,9 @@
         <script type="text/javascript" charset="utf-8">
 YUI({
     //filter: 'raw',
-    //combine: false
-}).use('console', 'gallery-comet-stream', 'test', function(Y) {
+    //combine: false,
+    gallery: 'gallery-2011.02.23-19-01'
+}).use('gallery-comet-stream', 'console', 'test', function(Y) {
 
     var testSuite = new Y.Test.Suite("Comet Stream Tests");
 
