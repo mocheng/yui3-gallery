@@ -5,8 +5,12 @@
 
         <meta http-equiv="content-type" content="text/html; charset=utf-8">
         <title>Test</title>
-        <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script>
+        <!--for local dev without WIFI -->
+        <script type="text/javascript" src="http://localhost/3.3.0/build/yui/yui-min.js"></script>
+
+        <!--<script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script>-->
         <script type="text/javascript" src="../build_tmp/gallery-smart-loader-debug.js"></script>
+
         <style type="text/css" media="screen">
         </style>
     </head>
@@ -21,28 +25,64 @@ YUI({
 
     var testSuite = new Y.Test.Suite("Smart Loader Tests");
 
-    var errorTestCases = new Y.Test.Case({
+    var testCases = new Y.Test.Case({
         name: 'Error cases',
 
-        setUp: function() { },
-
-        tearDown: function() {
+        setUp: function() { 
+            YUI.add('mod1', function(Y) {
+            },
+            '0.0.1',
+            {
+                requires: ['yui-base']
+            });
+            YUI.add('mod2', function(Y) {
+            },
+            '0.0.1',
+            {
+                requires: ['yui-base', 'oop', 'mod1']
+            });
         },
 
-        test_something: function() {
-            Y.Assert.areEqual('node', Y.getDependent(['test']));
-        }
+        tearDown: function() {
+            // can we unload modules?
+        },
 
+        test_getDependents: function() {
+            var expected = ['yui-base', 'oop', 'mod1'];
+            var dependents = Y.getDependents(['mod2']);
+
+            Y.Assert.areEqual(expected.length, dependents.length);
+            for(var i=0; i<expected.length; ++i) {
+                Y.Assert.areEqual(expected[i], dependents[i]);
+            }
+        },
+
+        test_getDependentInfos: function() {
+            var expectedPathes = {
+                'yui-base' : 'yui/yui-base-min.js',
+                'oop' : 'oop/oop-min.js',
+                'mod1' : 'mod1/mod1-min.js'
+            };
+            var modInfos = Y.getDependentInfos(['mod2']);
+            Y.log(modInfos);
+
+            Y.Object.each(modInfos, function(val, key) {
+                Y.log(val);
+                Y.Assert.areEqual(expectedPathes[key], val.path);
+            });
+        }
     });
 
+    /*
     var report = new Y.Console({
         verbose : true,
         //consoleLimit : 10,
         newestOnTop : false
     });
     report.render('#console');
+    */
 
-    testSuite.add(errorTestCases);
+    testSuite.add(testCases);
 
     Y.Test.Runner.add(testSuite);
     Y.Test.Runner.run();

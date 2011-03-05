@@ -1,7 +1,5 @@
-function getLoader() {
-    // loader should have been loaded
-    return Y.Env._loader;
-}
+var YArray = Y.Array,
+    loader = Y.Env._loader; // loader should have been loaded
 
 Y.smartUse = function() {
     var args = Array.prototype.slice.call(arguments, 0),
@@ -14,17 +12,35 @@ Y.smartUse = function() {
     }
 };
 
-Y.getDependent = function(modules) {
-    var loader = getLoader(),
-        dependents;
+/**
+ * get dependents for given module names
+ */
+Y.getDependents = function(moduleNames) {
+    var allReqs = {},
+        reqs,
+        dependents = [];
 
-    console.log(modules);
+    YArray.each(moduleNames, function(mName) {
+        reqs = loader.getRequires(loader.getModule(mName));
+        Y.mix(allReqs, YArray.hash(reqs));
+    });
 
-    loader.require(modules);
-    loader.ignoreRegistered = true;
-    loader.calculate(null, 'js');
-    dependents = loader.sorted;
-
-    console.log(dependents);
+    dependents = Y.Object.keys(allReqs);
     return dependents;
 };
+
+/**
+ * get dependents module info for given module names
+ */
+Y.getDependentInfos = function(moduleNames) {
+    var dependents = Y.getDependents(moduleNames),
+        moduleInfos = {};
+
+    YArray.each(dependents, function(val) {
+        moduleInfos[val] = loader.getModule(val);
+    });
+
+    //Y.log(moduleInfos);
+    return moduleInfos;
+};
+
