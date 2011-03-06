@@ -29,27 +29,35 @@ YUI({
         name: 'Error cases',
 
         setUp: function() { 
-            YUI.add('mod1', function(Y) {
-            },
-            '0.0.1',
-            {
-                requires: ['yui-base']
-            });
-            YUI.add('mod2', function(Y) {
-            },
-            '0.0.1',
-            {
-                requires: ['yui-base', 'oop', 'mod1']
+            Y.applyConfig({
+                modules: {
+                    mod1: {
+                        requires: ['yui-base']
+                    },
+                    mod2: {
+                        requires: ['yui-base', 'oop', 'mod1']
+                    },
+                    mod1_with_path: {
+                        fullpath: 'http://www.example.com/mod1_with_path.js',
+                        requires: ['yui-base', 'oop']
+                    },
+                    mod2_with_path: {
+                        fullpath: 'http://www.example.com/mod2_with_path.js',
+                        requires: ['yui-base', 'mod1_with_path']
+                    }
+                }
             });
         },
 
         tearDown: function() {
-            // can we unload modules?
+            // can we un-apply modules?
         },
 
         test_getDependents: function() {
             var expected = ['yui-base', 'oop', 'mod1'];
             var dependents = Y.getDependents(['mod2']);
+
+            Y.log(dependents);
 
             Y.Assert.areEqual(expected.length, dependents.length);
             for(var i=0; i<expected.length; ++i) {
@@ -66,11 +74,42 @@ YUI({
             var modInfos = Y.getDependentInfos(['mod2']);
             Y.log(modInfos);
 
-            Y.Object.each(modInfos, function(val, key) {
-                Y.log(val);
-                Y.Assert.areEqual(expectedPathes[key], val.path);
+            Y.Assert.areEqual(Y.Object.keys(expectedPathes).length, Y.Object.keys(modInfos).length);
+            Y.Object.each(expectedPathes, function(val, key) {
+                Y.Assert.areEqual(val, modInfos[key].path);
+            });
+        },
+
+        test_getLoadUrls : function() {
+            var version = Y.version,
+                expectedUrls = [
+                    Y.Lang.sub('http://yui.yahooapis.com/combo?{version}/build/yui/yui-base-min.js&{version}/build/oop/oop-min.js&{version}/build/mod1/mod1-min.js&{version}/build/mod2/mod2-min.js', {version: Y.version})
+                ];
+            var urls = Y.getLoadUrls(['mod2']);
+            Y.log(urls);
+
+            Y.Assert.areEqual(expectedUrls.length, urls.length);
+            Y.Array.each(expectedUrls, function(val, i) {
+                Y.Assert.areEqual(expectedUrls[i], urls[i]);
+            });
+        },
+
+        test_getLoadUrls2 : function() {
+            var version = Y.version,
+                expectedUrls = [
+                    Y.Lang.sub('http://yui.yahooapis.com/combo?{version}/build/yui/yui-base-min.js&{version}/build/oop/oop-min.js', {version: Y.version}),
+                    'http://www.example.com/mod1_with_path.js',
+                    'http://www.example.com/mod2_with_path.js'
+                ];
+            var urls = Y.getLoadUrls(['mod2_with_path']);
+            Y.log(urls);
+
+            Y.Assert.areEqual(expectedUrls.length, urls.length);
+            Y.Array.each(expectedUrls, function(val, i) {
+                Y.Assert.areEqual(expectedUrls[i], urls[i]);
             });
         }
+
     });
 
     /*

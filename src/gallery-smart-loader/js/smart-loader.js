@@ -1,9 +1,14 @@
 var YArray = Y.Array,
-    loader = Y.Env._loader; // loader should have been loaded
-
+comboBase = Y.Env.meta.comboBase,
+// default: http://yui.yahooapis.com/combo?
+comboRoot = Y.Env.meta.root,
+// default: [YUI VERSION]/build/
+loader = Y.Env._loader; // loader should have been loaded
+//Y.log('comboBase:' + comboBase);
+//Y.log('comboRoot:' + comboRoot);
 Y.smartUse = function() {
     var args = Array.prototype.slice.call(arguments, 0),
-        callback = args[args.length - 1];
+    callback = args[args.length - 1];
 
     if (Y.Lang.isFunction(callback)) {
         args.pop();
@@ -17,8 +22,7 @@ Y.smartUse = function() {
  */
 Y.getDependents = function(moduleNames) {
     var allReqs = {},
-        reqs,
-        dependents = [];
+    reqs, dependents = [];
 
     YArray.each(moduleNames, function(mName) {
         reqs = loader.getRequires(loader.getModule(mName));
@@ -34,7 +38,7 @@ Y.getDependents = function(moduleNames) {
  */
 Y.getDependentInfos = function(moduleNames) {
     var dependents = Y.getDependents(moduleNames),
-        moduleInfos = {};
+    moduleInfos = {};
 
     YArray.each(dependents, function(val) {
         moduleInfos[val] = loader.getModule(val);
@@ -42,5 +46,37 @@ Y.getDependentInfos = function(moduleNames) {
 
     //Y.log(moduleInfos);
     return moduleInfos;
+};
+
+Y.getLoadUrls = function(moduleNames) {
+    var modInfos = Y.getDependentInfos(moduleNames),
+    urls = [],
+    comboPathes = [];
+
+    Y.Array.each(moduleNames, function(m) {
+        modInfos[m] = loader.getModule(m);
+    });
+
+    Y.Object.each(modInfos, function(info, name) {
+        Y.log(name);
+        if (info.path) {
+            comboPathes.push(comboRoot + info.path);
+        } else {
+            urls.push(info.fullpath);
+        }
+    });
+
+    var comboUrl = comboBase + comboPathes.join('&');
+
+    urls.unshift(comboUrl);
+
+    Y.log(urls);
+
+    return urls;
+};
+
+Y.fetch = function(moduleNames) {
+    var urls = Y.getLoadUrls(moduleNames);
+
 };
 
