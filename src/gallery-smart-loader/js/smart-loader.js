@@ -1,11 +1,12 @@
 var YArray = Y.Array,
-comboBase = Y.Env.meta.comboBase,
-// default: http://yui.yahooapis.com/combo?
-comboRoot = Y.Env.meta.root,
-// default: [YUI VERSION]/build/
-loader = Y.Env._loader; // loader should have been loaded
+    native_use = Y.use,
+    comboBase = Y.Env.meta.comboBase, // default: http://yui.yahooapis.com/combo?
+    comboRoot = Y.Env.meta.root, // default: [YUI VERSION]/build/
+    loader = Y.Env._loader; // loader should have been loaded
+
 //Y.log('comboBase:' + comboBase);
 //Y.log('comboRoot:' + comboRoot);
+
 Y.smartUse = function() {
     var args = Array.prototype.slice.call(arguments, 0),
     callback = args[args.length - 1];
@@ -55,10 +56,13 @@ Y.getLoadUrls = function(moduleNames) {
 
     Y.Array.each(moduleNames, function(m) {
         modInfos[m] = loader.getModule(m);
+        if (!modInfos[m]) {
+            throw new Error('undefined module ' + m);
+        }
     });
 
     Y.Object.each(modInfos, function(info, name) {
-        Y.log(name);
+        //Y.log(name);
         if (info.path) {
             comboPathes.push(comboRoot + info.path);
         } else {
@@ -75,8 +79,39 @@ Y.getLoadUrls = function(moduleNames) {
     return urls;
 };
 
-Y.fetch = function(moduleNames) {
-    var urls = Y.getLoadUrls(moduleNames);
+Y.fetch = function(moduleNames, callback) {
+    var urls,
+        pendingMods = [],
+        pendingCnt;
 
+    Y.Array.each(moduleNames, function(mod) {
+        if (!YUI.Env.mods[mod]) {
+            pendingMods.push(mod);
+        }
+    });
+
+    Y.log('pendingMods length:' + pendingMods.length);
+
+    pendingCnt = pendingMods.length;
+    if (!pendingCnt) {
+        native_use.call(Y, callback);
+    } else {
+        Y.log('pendingMods: ' + pendingMods);
+        urls = Y.getLoadUrls(pendingMods);
+        //Y.log(urls);
+
+        Y.Array.each(urls, function(url) {
+            //Y.log(url);
+            Y.Get.script(url, {
+                onEnd: function() {
+                    Y.log('onEnd');
+                    --pendingCnt;
+
+                    if (!pendingCnt) {
+                        native_use.call(Y, callback);
+                    }
+                }
+            });
+        });
+    }
 };
-

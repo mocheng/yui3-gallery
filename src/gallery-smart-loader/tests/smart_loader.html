@@ -108,6 +108,30 @@ YUI({
             Y.Array.each(expectedUrls, function(val, i) {
                 Y.Assert.areEqual(expectedUrls[i], urls[i]);
             });
+        },
+
+        test_fetch: function() {
+            var invoked;
+            var urls = Y.fetch(['yui'], function(e) {
+                invoked = true;
+            });
+
+            Y.Assert.isTrue(invoked);
+        },
+
+        test_fetch_fail: function() {
+            var invoked = false, 
+                tc = this;
+
+            var urls = Y.fetch(['yui', 'mod1_with_path'], function(e) {
+                invoked = true;
+                tc.resume(function() {
+                });
+            });
+
+            Y.Assert.isFalse(invoked);
+
+            this.wait(5000);
         }
 
     });
