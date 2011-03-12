@@ -1,3 +1,5 @@
+YUI.add('gallery-scroll-beacon', function(Y) {
+
 var YEvent = Y.Event;
 
 YEvent.define('beacon-reached', {
@@ -16,3 +18,6 @@ YEvent.define('beacon-reached', {
 
 });
 
+
+
+}, '@VERSION@' ,{skinnable:false, requires:['event-custom']});

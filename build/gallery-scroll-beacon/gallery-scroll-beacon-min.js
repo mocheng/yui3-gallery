@@ -1,0 +1,1 @@
+YUI.add("gallery-scroll-beacon",function(b){var a=b.Event;a.define("beacon-reached",{on:function(e,d,c){},detach:function(e,d,c){},delegate:function(f,e,d,c){},detachDelegate:function(f,e,d,c){}});},"@VERSION@",{skinnable:false,requires:["event-custom"]});
