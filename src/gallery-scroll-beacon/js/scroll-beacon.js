@@ -45,11 +45,13 @@ Y.Event.define(EVENT_TYPE, {
 
         // Both scroll or resize can turn on element into viewport.
         //
-        subscription['_' + method + 'ScrollHandle'] = Y.on('scroll', this._checkBeacon, window, node, subscription, notifier, filter);
-        subscription['_' + method + 'ResizeHandle'] = Y.on('resize', this._checkBeacon, window, node, subscription, notifier, filter);
+        subscription['_' + method + 'ScrollHandle'] = Y.on('scroll', this._throttleCheck, window, this, subscription, notifier);
+        subscription['_' + method + 'ResizeHandle'] = Y.on('resize', this._throttleCheck, window, this, subscription, notifier);
+
+        Y.Event.simulate(window, 'scroll');
     },
 
-    _checkBeacon: function(ev, subscription, notifier, filter) {
+    _throttleCheck: function(ev, subscription, notifier) {
         // Depending on browser, the scroll event might be fired a lot. It is not good idea
         // to trigger event handler for every scroll event. Instead, only trigger it after 
         // some delay to throttle it.
@@ -57,16 +59,20 @@ Y.Event.define(EVENT_TYPE, {
         if (!subscription._throttled) {
             subscription._throttled = true;
 
-            Y.later(throttleDelay, this, function() {
-                subscription._nodeList.each(function(node, i) {
-                    if (Y.DOM.inViewportRegion(Y.Node.getDOMNode(node), false)) {
-                        ev.type = EVENT_TYPE;
-                        notifier.fire(ev);
-                    }
-                });
-                subscription._throttled = false;
-            });
+            this._checkBeacon(ev, subscription, notifier);
         }
+    },
+
+    _checkBeacon: function(ev, subscription, notifier) {
+        Y.later(throttleDelay, this, function() {
+            subscription._nodeList.each(function(node, i) {
+                if (Y.DOM.inViewportRegion(Y.Node.getDOMNode(node), false)) {
+                    ev.type = EVENT_TYPE;
+                    notifier.fire(ev);
+                }
+            });
+            subscription._throttled = false;
+        });
     },
 
     _detach: function(subscription, method) {
