@@ -45,13 +45,13 @@ Y.Event.define(EVENT_TYPE, {
 
         // Both scroll or resize can turn on element into viewport.
         //
-        subscription['_' + method + 'ScrollHandle'] = Y.on('scroll', this._throttleCheck, window, this, subscription, notifier);
-        subscription['_' + method + 'ResizeHandle'] = Y.on('resize', this._throttleCheck, window, this, subscription, notifier);
+        subscription['_' + method + 'ScrollHandle'] = Y.on('scroll', this._throttleCheck, window, this, node, subscription, notifier);
+        subscription['_' + method + 'ResizeHandle'] = Y.on('resize', this._throttleCheck, window, this, node, subscription, notifier);
 
         Y.Event.simulate(window, 'scroll');
     },
 
-    _throttleCheck: function(ev, subscription, notifier) {
+    _throttleCheck: function(ev, node, subscription, notifier) {
         // Depending on browser, the scroll event might be fired a lot. It is not good idea
         // to trigger event handler for every scroll event. Instead, only trigger it after 
         // some delay to throttle it.
@@ -59,17 +59,19 @@ Y.Event.define(EVENT_TYPE, {
         if (!subscription._throttled) {
             subscription._throttled = true;
 
-            this._checkBeacon(ev, subscription, notifier);
+            this._checkBeacon(ev, node, subscription, notifier);
         }
     },
 
-    _checkBeacon: function(ev, subscription, notifier) {
+    _checkBeacon: function(ev, node, subscription, notifier) {
         Y.later(throttleDelay, this, function() {
-            subscription._nodeList.each(function(node, i) {
-                if (Y.DOM.inViewportRegion(Y.Node.getDOMNode(node), false)) {
+            subscription._nodeList.each(function(n, i) {
+                if (Y.DOM.inViewportRegion(Y.Node.getDOMNode(n), false)) {
                     if (!subscription._inViewport) {
                         subscription._inViewport = true;
                         ev.type = EVENT_TYPE;
+                        ev.currentTarget = node;
+                        ev.target = n;
                         notifier.fire(ev);
                     }
                 } else {
