@@ -69,8 +69,13 @@ Y.Event.define(EVENT_TYPE, {
         Y.later(throttleDelay, this, function() {
             subscription._nodeList.each(function(node, i) {
                 if (Y.DOM.inViewportRegion(Y.Node.getDOMNode(node), false)) {
-                    ev.type = EVENT_TYPE;
-                    notifier.fire(ev);
+                    if (!subscription._inViewport) {
+                        subscription._inViewport = true;
+                        ev.type = EVENT_TYPE;
+                        notifier.fire(ev);
+                    }
+                } else {
+                    subscription._inViewport = false;
                 }
             });
             subscription._throttled = false;
