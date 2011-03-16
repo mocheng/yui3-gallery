@@ -5,13 +5,12 @@
  */
 
 /**
- * Configurable throttling delay value in milliseconds.
+ * Configurable scroll beacon poll interval in milliseconds.
  *
- * @config Y.config.ScrollBeacon.throttleDelay
+ * @config Y.config.scrollBeaconInterval
  * @type {Number}
  */
-
-var throttleDelay = (Y.config.ScrollBeacon && Y.config.ScrollBeacon.throttleDelay) || 50,
+var throttleDelay = Y.config.scrollBeaconInterval || 100,
     EVENT_TYPE = 'beacon:reached';
 
 /**
@@ -35,7 +34,7 @@ Y.Event.define(EVENT_TYPE, {
         if (filter) {
             method = 'delegate';
             if (!Y.Lang.isString(filter)) {
-                throw new Error('filter function is not supported');
+                throw new Error('only string filter is supported');
             }
             subscription._nodeList = node.all(filter);
         } else {
@@ -43,54 +42,41 @@ Y.Event.define(EVENT_TYPE, {
             subscription._nodeList = new Y.NodeList(node);
         }
 
-        // Both scroll or resize can turn on element into viewport.
+        // 'scroll' and 'resize' event proves to be not good for this case because:
+        //  1) 'scroll' might be fired a lot. Then it must be throttled. As a result, sometimes
+        //      beacon in & out viewport cannot be detected;
+        //  2) Page height & width change doesn't trigger 'scroll' event.
         //
-        subscription['_' + method + 'ScrollHandle'] = Y.on('scroll', this._throttleCheck, window, this, node, subscription, notifier);
-        subscription['_' + method + 'ResizeHandle'] = Y.on('resize', this._throttleCheck, window, this, node, subscription, notifier);
+        //  So, let's turn to timer approach.
+        //
+        subscription['_' + method + 'Handle'] = Y.later(throttleDelay, this, this._checkBeacon, [node, subscription, notifier], true);
 
-        Y.Event.simulate(window, 'scroll');
+        // check it. The beacon might already in viewport.
+        this._checkBeacon(node, subscription, notifier);
     },
 
-    _throttleCheck: function(ev, node, subscription, notifier) {
-        // Depending on browser, the scroll event might be fired a lot. It is not good idea
-        // to trigger event handler for every scroll event. Instead, only trigger it after 
-        // some delay to throttle it.
-        //
-        if (!subscription._throttled) {
-            subscription._throttled = true;
-
-            this._checkBeacon(ev, node, subscription, notifier);
-        }
-    },
-
-    _checkBeacon: function(ev, node, subscription, notifier) {
-        Y.later(throttleDelay, this, function() {
-            subscription._nodeList.each(function(n, i) {
-                if (Y.DOM.inViewportRegion(Y.Node.getDOMNode(n), false)) {
-                    if (!subscription._inViewport) {
-                        subscription._inViewport = true;
-                        ev.type = EVENT_TYPE;
-                        ev.currentTarget = node;
-                        ev.target = n;
-                        notifier.fire(ev);
-                    }
-                } else {
-                    subscription._inViewport = false;
+    _checkBeacon: function(node, subscription, notifier) {
+        var ev;
+        subscription._nodeList.each(function(targetNode, i) {
+            if (Y.DOM.inViewportRegion(Y.Node.getDOMNode(targetNode), false)) {
+                if (!subscription._inViewport) {
+                    ev = new Y.DOMEventFacade(EVENT_TYPE, node);
+                    ev.type = EVENT_TYPE;
+                    ev.currentTarget = node;
+                    ev.target = targetNode;
+                    notifier.fire(ev);
                 }
-            });
-            subscription._throttled = false;
+                subscription._inViewport = true;
+            } else {
+                subscription._inViewport = false;
+            }
         });
     },
 
     _detach: function(subscription, method) {
-        var onScrollHandle = subscription['_' + method + 'ScrollHandle'],
-            onResizeHandle = subscription['_' + method + 'ResizeHandle'];
-
-        if (onScrollHandle) {
-            onScrollHandle.detach();
-        }
-        if (onResizeHandle) {
-            onResizeHandle.detach();
+        var handle = subscription['_' + method + 'Handle'];
+        if (handle) {
+            handle.cancel();
         }
     },
 
@@ -100,6 +86,7 @@ Y.Event.define(EVENT_TYPE, {
 
     detach: function(node, subscription) {
         this._detach(subscription, 'on');
+
     },
 
     delegate: function(node, subscription, notifier, filter) {

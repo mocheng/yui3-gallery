@@ -48,25 +48,24 @@
 YUI({
     //filter: 'raw',
     //combine: false,
-  ScrollBeacon: {
-        throttleDelay: 200
-   }
+    scrollBeaconInterval: 200
 }).use('gallery-scroll-beacon', 'node', function(Y) {
     var list = Y.one('#list');
 
+    /*
     var handle = Y.one('#beacon').on('beacon:reached', function(ev) {
         Y.log('reached');
 
         var html = "<li>The most powerful earthquake to hit Japan in the last century has created a powerful tsunami and mass destruction. People are offering words of support and sympathy, sharing critical information about aid, and organizations are seeking support by setting up short codes for donations and reaching out to the global community. </li>";
 
-        list.appendChild(Y.Node.create( (new Array(10)).join(html) ));
         Y.log(ev.currentTarget);
         Y.log(ev.target);
         Y.log(ev.type);
 
+        list.appendChild(Y.Node.create( (new Array(10)).join(html) ));
     });
+    */
 
-    /*
     var handle = Y.delegate('beacon:reached', function(ev) {
         Y.log('reached');
 
@@ -77,7 +76,6 @@ YUI({
         Y.log(ev.target);
         Y.log(ev.type);
     }, "body", "#beacon");
-    */
 
 });
         </script>
