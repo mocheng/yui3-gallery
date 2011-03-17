@@ -101,4 +101,4 @@ Y.Event.define(EVENT_TYPE, {
 });
 
 
-}, '@VERSION@' ,{skinnable:false, requires:['event','event-custom','event-simulate','node']});
+}, 'gallery-2011.03.16-21-24' ,{requires:['event','event-custom','event-simulate','node'], skinnable:false});
