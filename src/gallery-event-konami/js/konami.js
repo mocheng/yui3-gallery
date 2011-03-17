@@ -50,14 +50,17 @@ Y.Event.define('konami', {
     on: function () {
         this._attach.apply(this, arguments);
     },
+
     delegate: function () {
         this._attach.apply(this, arguments);
     },
+
     detach: function (node, sub) {
         if (sub._onHandle) {
             sub._onHandle.detach();
         }
     },
+
     detachDelegate: function (node, sub) {
         if (sub._delegateHandle) {
             sub._delegateHandle.detach();
