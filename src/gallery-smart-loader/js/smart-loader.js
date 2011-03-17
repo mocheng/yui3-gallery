@@ -23,7 +23,8 @@ Y.smartUse = function() {
  */
 Y.getDependents = function(moduleNames) {
     var allReqs = {},
-    reqs, dependents = [];
+        reqs,
+        dependents = [];
 
     YArray.each(moduleNames, function(mName) {
         reqs = loader.getRequires(loader.getModule(mName));
@@ -39,7 +40,9 @@ Y.getDependents = function(moduleNames) {
  */
 Y.getDependentInfos = function(moduleNames) {
     var dependents = Y.getDependents(moduleNames),
-    moduleInfos = {};
+        moduleInfos = {};
+
+    Y.log('dependents:' + dependents);
 
     YArray.each(dependents, function(val) {
         moduleInfos[val] = loader.getModule(val);
@@ -51,18 +54,28 @@ Y.getDependentInfos = function(moduleNames) {
 
 Y.getLoadUrls = function(moduleNames) {
     var modInfos = Y.getDependentInfos(moduleNames),
-    urls = [],
-    comboPathes = [];
+        urls = [],
+        comboPathes = [],
+        comboUrl;
 
-    Y.Array.each(moduleNames, function(m) {
-        modInfos[m] = loader.getModule(m);
-        if (!modInfos[m]) {
-            throw new Error('undefined module ' + m);
+    Y.log(moduleNames);
+    Y.log(modInfos);
+
+    // add modules themselves
+    Y.Array.each(moduleNames, function(modName) {
+        // only load modules that have not been loaded.
+        if (YUI.Env.mods[modName]) {
+            modInfos[modName] = loader.getModule(modName);
+
+            if (!modInfos[modName]) {
+                throw new Error('undefined module ' + modName);
+            }
         }
     });
 
-    Y.Object.each(modInfos, function(info, name) {
-        //Y.log(name);
+    Y.Object.each(modInfos, function(info, modName) {
+        //Y.log(modName);
+
         if (info.path) {
             comboPathes.push(comboRoot + info.path);
         } else {
@@ -70,9 +83,11 @@ Y.getLoadUrls = function(moduleNames) {
         }
     });
 
-    var comboUrl = comboBase + comboPathes.join('&');
-
-    urls.unshift(comboUrl);
+    //TODO: perhaps we need more than one combo
+    if (comboPathes.length) {
+        comboUrl = comboBase + comboPathes.join('&');
+        urls.unshift(comboUrl);
+    }
 
     Y.log(urls);
 
@@ -83,6 +98,9 @@ Y.fetch = function(moduleNames, callback) {
     var urls,
         pendingMods = [],
         pendingCnt;
+
+    function _finish() {
+    }
 
     Y.Array.each(moduleNames, function(mod) {
         if (!YUI.Env.mods[mod]) {
@@ -98,20 +116,30 @@ Y.fetch = function(moduleNames, callback) {
     } else {
         Y.log('pendingMods: ' + pendingMods);
         urls = Y.getLoadUrls(pendingMods);
-        //Y.log(urls);
+
+        Y.log(urls);
 
         Y.Array.each(urls, function(url) {
             //Y.log(url);
             Y.Get.script(url, {
-                onEnd: function() {
-                    Y.log('onEnd');
-                    --pendingCnt;
+                onSuccess: function() {
+                    Y.log('onSuccess');
+                    -- pendingCnt;
 
                     if (!pendingCnt) {
                         native_use.call(Y, callback);
                     }
+                },
+                onFailure: function() {
+                    Y.log('onFailure');
+                    _finish();
+                },
+                onTimeout: function() {
+                    Y.log('onTimeout');
+                    _finish();
                 }
             });
         });
     }
+
 };
