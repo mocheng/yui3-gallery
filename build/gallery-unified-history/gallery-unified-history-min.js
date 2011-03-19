@@ -1,0 +1,1 @@
+YUI.add("gallery-unified-history",function(a){},"@VERSION@",{skinnable:false,requires:["history"]});
