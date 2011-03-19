@@ -6,9 +6,9 @@
         <meta http-equiv="content-type" content="text/html; charset=utf-8">
         <title>Test</title>
         <!--for local dev without WIFI -->
-        <script type="text/javascript" src="http://localhost/3.3.0/build/yui/yui-min.js"></script>
+        <!--<script type="text/javascript" src="http://localhost/3.3.0/build/yui/yui-min.js"></script>-->
 
-        <!--<script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script>-->
+        <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script>
         <script type="text/javascript" src="../build_tmp/gallery-smart-loader-debug.js"></script>
 
         <style type="text/css" media="screen">
@@ -25,14 +25,14 @@ YUI({
 
     var testSuite = new Y.Test.Suite("Smart Loader Tests");
 
-    var testCases = new Y.Test.Case({
-        name: 'Error cases',
+    var testHelperFunctions = new Y.Test.Case({
+        name: 'test helper functions',
 
         setUp: function() { 
             Y.applyConfig({
                 modules: {
                     mod1: {
-                        requires: ['yui-base']
+                        requires: ['yui-base', 'event-base']
                     },
                     mod2: {
                         requires: ['yui-base', 'oop', 'mod1']
@@ -54,7 +54,7 @@ YUI({
         },
 
         test_getDependents: function() {
-            var expected = ['yui-base', 'oop', 'mod1'];
+            var expected = ['yui-base', 'oop', 'mod1', 'event-base', 'event-custom-base'];
             var dependents = Y.getDependents(['mod2']);
 
             Y.log(dependents);
@@ -69,6 +69,8 @@ YUI({
             var expectedPathes = {
                 'yui-base' : 'yui/yui-base-min.js',
                 'oop' : 'oop/oop-min.js',
+                'event-base' : 'event/event-base-min.js',
+                'event-custom-base' : 'event-custom/event-custom-base-min.js',
                 'mod1' : 'mod1/mod1-min.js'
             };
             var modInfos = Y.getDependentInfos(['mod2']);
@@ -83,7 +85,7 @@ YUI({
         test_getLoadUrls : function() {
             var version = Y.version,
                 expectedUrls = [
-                    Y.Lang.sub('http://yui.yahooapis.com/combo?{version}/build/yui/yui-base-min.js&{version}/build/oop/oop-min.js&{version}/build/mod1/mod1-min.js&{version}/build/mod2/mod2-min.js', {version: Y.version})
+                    Y.Lang.sub('http://yui.yahooapis.com/combo?{version}/build/mod1/mod1-min.js&{version}/build/mod2/mod2-min.js', {version: Y.version})
                 ];
             var urls = Y.getLoadUrls(['mod2']);
             Y.log(urls);
@@ -97,7 +99,7 @@ YUI({
         test_getLoadUrls2 : function() {
             var version = Y.version,
                 expectedUrls = [
-                    Y.Lang.sub('http://yui.yahooapis.com/combo?{version}/build/yui/yui-base-min.js&{version}/build/oop/oop-min.js', {version: Y.version}),
+                    //Y.Lang.sub('http://yui.yahooapis.com/combo?{version}/build/yui/yui-base-min.js&{version}/build/oop/oop-min.js', {version: Y.version}),
                     'http://www.example.com/mod1_with_path.js',
                     'http://www.example.com/mod2_with_path.js'
                 ];
@@ -108,9 +110,43 @@ YUI({
             Y.Array.each(expectedUrls, function(val, i) {
                 Y.Assert.areEqual(expectedUrls[i], urls[i]);
             });
+        }
+
+    });
+
+    var testFetch = new Y.Test.Case({
+        name: 'test helper functions',
+
+        setUp: function() { 
+            Y.applyConfig({
+                modules: {
+                    mod1: {
+                        requires: ['yui-base']
+                    },
+                    mod2: {
+                        requires: ['yui-base', 'oop', 'mod1']
+                    },
+                    mod1_with_path: {
+                        fullpath: 'http://www.example.com/mod1_with_path.js',
+                        requires: ['yui-base', 'oop']
+                    },
+                    mod2_with_path: {
+                        fullpath: 'http://www.example.com/mod2_with_path.js',
+                        requires: ['yui-base', 'mod1_with_path']
+                    }
+                }
+            });
+
+            this.nativeGetScript = Y.Get.script;
         },
 
-        test_fetch: function() {
+        tearDown: function() {
+            // can we un-apply modules?
+
+            Y.Get.script = this.nativeGetScript;
+        },
+
+        test_fetch_loaded_module: function() {
             var invoked;
             var urls = Y.fetch(['yui'], function(e) {
                 invoked = true;
@@ -120,8 +156,15 @@ YUI({
         },
 
         test_fetch_fail: function() {
-            var invoked = false, 
+            var invoked = false,
                 tc = this;
+
+            // mock Y.Get.script
+            Y.Get.script =  function(url, cfg) {
+                Y.later(1000, tc, function() {
+                    cfg.onFailure();
+                });
+            };
 
             var urls = Y.fetch(['yui', 'mod1_with_path'], function(e) {
                 invoked = true;
@@ -131,9 +174,30 @@ YUI({
 
             Y.Assert.isFalse(invoked);
 
-            this.wait(5000);
-        }
+            this.wait(2000);
+        },
 
+        test_fetch_success: function() {
+            var invoked = false,
+                tc = this;
+
+            // mock Y.Get.script
+            Y.Get.script =  function(url, cfg) {
+                Y.later(1000, tc, function() {
+                    cfg.onSuccess();
+                });
+            };
+
+            var urls = Y.fetch(['yui', 'mod1_with_path'], function(e) {
+                invoked = true;
+                tc.resume(function() {
+                });
+            });
+
+            Y.Assert.isTrue(invoked);
+
+            this.wait(2000);
+        }
     });
 
     /*
@@ -145,7 +209,8 @@ YUI({
     report.render('#console');
     */
 
-    testSuite.add(testCases);
+    testSuite.add(testHelperFunctions);
+    //testSuite.add(testFetch);
 
     Y.Test.Runner.add(testSuite);
     Y.Test.Runner.run();
