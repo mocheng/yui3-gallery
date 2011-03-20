@@ -20,6 +20,7 @@
     </head>
     <body class="yui3-skin-sam">
         <div id="demo">
+            <h1>The page should not refresh</h1>
         </div>
         <div id="console"></div>
 
@@ -27,10 +28,11 @@
 YUI({
     //filter: 'raw',
     //combine: false,
+    usePath: ['tab', 'pic']
 }).use('gallery-unified-history', 'history', 'node', function(Y) {
     
 var history = new Y.History({
-    usePath: ['tab', 'pic']
+    //usePath: ['tab', 'pic']
 });
 /*
 history.addValue('tab', 2, {
