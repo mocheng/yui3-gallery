@@ -1,0 +1,49 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,user-scalable=no">
+
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <title>Test</title>
+        <!--for local dev without WIFI -->
+        <script type="text/javascript" src="http://localhost/3.3.0/build/yui/yui-min.js"></script>
+
+        <!-- <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script> -->
+        <script type="text/javascript" src="../build_tmp/gallery-unified-history-debug.js"></script>
+
+        <style type="text/css" media="screen">
+#demo{
+    width: 640px;
+    margin: 10px auto;
+}
+        </style>
+    </head>
+    <body class="yui3-skin-sam">
+        <div id="demo">
+        </div>
+        <div id="console"></div>
+
+        <script type="text/javascript" charset="utf-8">
+YUI({
+    //filter: 'raw',
+    //combine: false,
+}).use('gallery-unified-history', 'history', 'node', function(Y) {
+    
+var history = new Y.History({
+    usePath: ['tab', 'pic']
+});
+/*
+history.addValue('tab', 2, {
+    title: 'hello'
+});
+*/
+history.add({
+    'tab' : 1,
+    'pic' : 'abc'
+});
+
+
+});
+        </script>
+    </body>
+</html>
