@@ -59,8 +59,7 @@ li.selected {
         <script type="text/javascript" charset="utf-8">
 YUI({
     //filter: 'raw',
-    //combine: false,
-    usePath: ['tab', 'pic']
+    //combine: false
 }).use('gallery-unified-history', 'history', 'node', function(Y) {
     var info = Y.one("#info");
 
@@ -82,7 +81,7 @@ YUI({
 
 
 var history = new Y.History({
-    //usePath: ['tab', 'pic']
+    usePath: ['tab', 'pic']
 });
 /*
 history.addValue('tab', 2, {

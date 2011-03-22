@@ -11,9 +11,9 @@ var SRC_POPSTATE    = 'popstate',
     HistoryHash     = Y.HistoryHash,
     HistoryHTML5    = Y.HistoryHTML5,
 
-    _nativeHTML5Init = HistoryHTML5._init,
-    _nativeHashInit = HistoryHash._init,
-    nativeParseHash = HistoryHash.parsetHash,
+    _nativeHTML5Init = HistoryHTML5.prototype._init,
+    _nativeHashInit = HistoryHash.prototype._init,
+    nativeParseHash = HistoryHash.parseHash,
     nativeCreateHash = HistoryHash.createHash;
 
 //////////////////////////////////
@@ -23,11 +23,11 @@ var SRC_POPSTATE    = 'popstate',
 function getHtml5UrlFragment(state, config) {
     if (config.useKeyValuePair) {
         return (location.href.indexOf('?') != -1 ? '&' : '?') + nativeCreateHash(state);
-    } else if (Y.config.usePath) {
+    } else if (config.usePath) {
 
         //TODO: what if url has query string or hash fragment?
 
-        return (location.href.charAt(location.href.length-1) === '/' ? '' : '/') + HistoryHash.createHash(state);
+        return (location.href.charAt(location.href.length-1) === '/' ? '' : '/') + HistoryHash._createPath(state, config.usePath);
     }
 }
 
@@ -59,16 +59,25 @@ HistoryHTML5.prototype._init = function() {
 //////////////////////////////////
 
 HistoryHash.prototype._init = function(config) {
-    // The config.usePath is supposed to be used in parseHash & createHash, but parsehash &
-    // createHash are static methods which cannnot access config specfici to one HistoryHash
-    // instance. Since one page has obviously need only one History instance, we copy related
-    // config to Y.config to be available for static methods parseHash & createHash.
+    // HistoryHash.parseHash and HistoryHash.createHash should be redefined. But,
+    // the two methods are static and cannot access "this" instance. So, an static
+    // method "_currInstance" is added/deleted before and after these two methods ar
+    // invoked. Since JavaScript is single threaded, this works without race condition.
     //
-    if (config.usePath) {
-        Y.config.usePath = config.usePath;
-    }
+    Do.before(HistoryHash._injectInstance, HistoryHash, 'parseHash', this);
+    Do.after(HistoryHash._ejectInstance, HistoryHash, 'parseHash', this);
+    Do.before(HistoryHash._injectInstance, HistoryHash, 'createHash', this);
+    Do.after(HistoryHash._ejectInstance, HistoryHash, 'createHash', this);
 
     _nativeHashInit.apply(this, arguments);
+};
+
+HistoryHash._injectInstance = function() {
+    HistoryHash._currInstance = this;
+};
+
+HistoryHash._ejectInstance = function(config) {
+    delete HistoryHash._currInstance;
 };
 
 /**
@@ -84,11 +93,17 @@ HistoryHash.prototype._init = function(config) {
  * @static
  */
 HistoryHash.parseHash = function (hash) {
-    if (!Y.config.usePath) {
+
+    var usePath = HistoryHash._currInstance && HistoryHash._currInstance._config && HistoryHash._currInstance._config.usePath;
+    if (!usePath) {
         nativeParseHash.apply(this, arguments);
         return;
+    } else {
+        return HistoryHash._parsePath(hash, usePath);
     }
+};
 
+HistoryHash._parsePath = function (hash, usePathConfig) {
     var decode = HistoryHash.decode,
         i,
         len,
@@ -110,7 +125,7 @@ HistoryHash.parseHash = function (hash) {
 
     segments = hash.split('/');
     for (i = 0, len = segments.length; i < len; ++i) {
-        params[decode(Y.config.usePath[i])] = decode(segments[i]);
+        params[decode(usePathConfig[i])] = decode(segments[i]);
     }
 
     return params;
@@ -128,15 +143,22 @@ HistoryHash.parseHash = function (hash) {
  * @static
  */
 HistoryHash.createHash = function (params) {
-    if (!Y.config.usePath) {
+
+    var usePath = HistoryHash._currInstance && HistoryHash._currInstance._config && HistoryHash._currInstance._config.usePath;
+
+    if (!usePath) {
         nativeCreateHash.apply(this, arguments);
         return;
+    } else {
+        return HistoryHash._createPath(params, usePath);
     }
+};
 
+HistoryHash._createPath = function (params, usePathConfig) {
     var encode      = HistoryHash.encode,
         segments    = [];
 
-    Y.Array.each(Y.config.usePath, function(val, i) {
+    Y.Array.each(usePathConfig, function(val, i) {
         if (Lang.isValue(params[val])) {
             segments.push(params[val]);
         }
