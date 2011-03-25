@@ -25,8 +25,10 @@ ul.list {
 }
 
 ul.list li {
+    cursor: pointer;
     float: left;
     border: 1px solid #DADADA;
+    margin-left: 10px;
     width: 80px;
     height: 40px;
     display: block;
@@ -35,33 +37,77 @@ ul.list li {
     cursor: pointer;
 }
 
+ul.list li:hover {
+    color: #AAA;
+}
+
+ul.list li.selected{
+    color: #BBB;
+}
+
+
 li.selected {
     background-color: #777;
 }
         </style>
     </head>
     <body class="yui3-skin-sam">
+<?php
+    $requestUri = $_SERVER['REQUEST_URI'];
+    $selfUri = $_SERVER['PHP_SELF'];
+    $selfDirName = dirname($selfUri);
+
+    $paramsStr = substr($requestUri, strlen($selfDirName)+1);
+
+    if (!$paramsStr) {
+        $params = array(
+            'page' => 'home',
+            'display' => 'list'
+        );
+    } else {
+        if (substr($paramsStr, 0, 1) == '?') {
+            parse_str(substr($paramsStr, 1), $params);
+        } else {
+            $arr = split('/', $paramsStr);
+            $params = array(
+                'page' => $arr[0],
+                'display' => $arr[1]
+            );
+        }
+        $params['display' ] = $params['display'] ? $params['display'] : 'list';
+    }
+
+    if (!$params['page'] || !$params['display']) {
+        header("HTTP/1.0 404 Not Found");
+        echo 'Page not found';
+        return;
+    }
+
+    $jsonFile = './' . $params['page'] . '.json';
+    if (!file_exists($jsonFile)) {
+        header("HTTP/1.0 404 Not Found");
+        echo 'Resource not found';
+        return;
+    }
+
+?>
         <div id="demo">
-            <h1 id="info">The page should not refresh</h1>
-            <h1 id="info"><?php echo $_SERVER['REQUEST_URI']; ?></h1>
-            <h1 id="info"><?php echo $_SERVER['PHP_SELF']; ?></h1>
+            <ul id="nav-list" class="list">
+
+                <li class="<?php echo $params['page'] == 'home' ? 'selected' : '' ?>"><a href="home">Home</a></li>
+                <li class="<?php echo $params['page'] == 'articles' ? 'selected' : '' ?>"><a href="articles">Articles</a></li>
+                <li class="<?php echo $params['page'] == 'about' ? 'selected' : '' ?>"><a href="about">About</a></li>
+            </ul>
             <p>
 <?php
-//echo file_get_contents('./test.json');
+    $fileContent = file_get_contents($jsonFile);
+    $data = json_decode($fileContent);
+    echo $data->content;
 ?>
             </p>
-            <ul id="color-list" class="list">
-                <li>Red</li>
-                <li>Green</li>
-                <li>Blue</li>
-            </ul>
-            <ul id="size-list" class="list">
-                <li>10</li>
-                <li>20</li>
-                <li>30</li>
-            </ul>
         </div>
-        <div id="console"></div>
+        <div id="console">
+        </div>
 
         <script type="text/javascript" charset="utf-8">
 YUI({
@@ -80,11 +126,7 @@ YUI({
 
     Y.delegate('click', function(ev) {
         updateColor(ev.target.get('innerHTML'));
-    }, '#color-list', 'li');
-
-    Y.delegate('click', function(ev) {
-        updateFontSize(ev.target.get('innerHTML'));
-    }, '#size-list', 'li');
+    }, '#nav-list', 'li');
 
 
 var history = new Y.History({
@@ -95,10 +137,12 @@ history.addValue('tab', 2, {
     title: 'hello'
 });
 */
+/*
 history.add({
     'tab' : 1,
     'pic' : 'abc'
 });
+ */
 
 
 });
