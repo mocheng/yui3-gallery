@@ -7,12 +7,12 @@
         <title>Test</title>
         <!--for local dev without WIFI -->
         <script type="text/javascript" src="http://localhost/3.3.0/build/yui/yui-min.js"></script>
+        <link type="text/css" src="http://localhost/3.3.0/build/cssgrids/grids-min.css"/>
 
         <!-- <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script> -->
         <script type="text/javascript" src="/yui3-gallery/src/gallery-unified-history/build_tmp/gallery-unified-history-debug.js"></script>
 
-        <style type="text/css" media="screen">
-#demo{
+        <style type="text/css" media="screen"> #demo{
     width: 640px;
     margin: 10px auto;
 }
@@ -20,7 +20,7 @@
 ul.list {
     display: block;
     list-style-type: none;
-    height: 50px;
+    height: 40px;
     text-align: center;
 }
 
@@ -37,21 +37,39 @@ ul.list li {
     cursor: pointer;
 }
 
+ul.list li a{
+    display: block;
+    height: 40px;
+}
+
 ul.list li:hover {
     color: #AAA;
 }
 
-ul.list li.selected{
+ul.list .selected{
     color: #BBB;
 }
 
 
-li.selected {
+.selected {
     background-color: #777;
+}
+
+.art-img {
+    border: 2px solid #DDDAD2;
+    float: right;
+}
+
+.floatLeft {
+    float: left;
+}
+
+.floatRight {
+    float: right;
 }
         </style>
     </head>
-    <body class="yui3-skin-sam">
+    <body class="yui3-skin-sam doc2">
 <?php
     $requestUri = $_SERVER['REQUEST_URI'];
     $selfUri = $_SERVER['PHP_SELF'];
@@ -83,7 +101,7 @@ li.selected {
         return;
     }
 
-    $jsonFile = './' . $params['page'] . '.json';
+    $jsonFile = './' . $params['page'] . '.data';
     if (!file_exists($jsonFile)) {
         header("HTTP/1.0 404 Not Found");
         echo 'Resource not found';
@@ -91,20 +109,30 @@ li.selected {
     }
 
 ?>
+    <script type="text/javascript">
+        YUI_config = {baseUrl : "<?php echo $selfDirName ?>"};
+    </script>
         <div id="demo">
-            <ul id="nav-list" class="list">
+            <div class='hd'>
+                <ul id="navi-list" class="list">
+                    <li><a id="home" class="<?php echo $params['page'] == 'home' ? 'selected' : '' ?> navi" href="home">Home</a></li>
+                    <li><a id="articles" class="<?php echo $params['page'] == 'articles' ? 'selected' : '' ?> navi" href="articles">Articles</a></li>
+                    <li><a id="about" class="<?php echo $params['page'] == 'about' ? 'selected' : '' ?> navi" href="about">About</a></li>
+                </ul>
+            </div>
 
-                <li class="<?php echo $params['page'] == 'home' ? 'selected' : '' ?>"><a href="home">Home</a></li>
-                <li class="<?php echo $params['page'] == 'articles' ? 'selected' : '' ?>"><a href="articles">Articles</a></li>
-                <li class="<?php echo $params['page'] == 'about' ? 'selected' : '' ?>"><a href="about">About</a></li>
-            </ul>
-            <p>
-<?php
-    $fileContent = file_get_contents($jsonFile);
-    $data = json_decode($fileContent);
-    echo $data->content;
-?>
-            </p>
+            <div class='bd'>
+                <p id="content">
+    <?php
+        $fileContent = file_get_contents($jsonFile);
+        $data = json_decode($fileContent);
+        echo $data->content;
+    ?>
+<!--
+                    <img class="art-img" src="<?php echo $data->img; ?>"></img>
+-->
+                </p>
+            </div>
         </div>
         <div id="console">
         </div>
@@ -113,37 +141,73 @@ li.selected {
 YUI({
     //filter: 'raw',
     //combine: false
-}).use('gallery-unified-history', 'history', 'node', function(Y) {
-    var info = Y.one("#info");
+//}).use(/*'gallery-unified-history',*/ 'history', 'node', 'io', 'json', function(Y) {
+}).use('history', 'node', 'io', 'json', function(Y) {
 
-    function updateColor(color) {
-        info.setStyle('color', color);
-    }
+var nodeContent = Y.one('#content');
 
-    function updateFontSize(fontSize) {
-        info.setStyle('fontSize', fontSize + 'px');
-    }
-
-    Y.delegate('click', function(ev) {
-        updateColor(ev.target.get('innerHTML'));
-    }, '#nav-list', 'li');
-
-
+/*
 var history = new Y.History({
-    usePath: ['tab', 'pic']
-});
-/*
-history.addValue('tab', 2, {
-    title: 'hello'
-});
-*/
-/*
-history.add({
-    'tab' : 1,
-    'pic' : 'abc'
+    usePath: ['page', 'display']
 });
  */
 
+var history = new Y.HistoryHash();
+//var history = new Y.HistoryHTML5();
+
+/*
+var history = new Y.HistoryHTML5({
+    usePath: ['page']
+});
+ */
+
+//alert(history.get('page'));
+var currPage = history.get('page');
+currPage = currPage || 'home';
+navigate(Y.one('#' + currPage));
+
+history.on('pageChange', function(ev) {
+    Y.log(ev.src);
+    // no necessary
+    //navigate(Y.one('#' + ev.newVal));
+});
+
+function navigate(target) {
+    Y.log('enter navigate');
+
+    Y.one('#navi-list .selected').removeClass('selected');
+    target.addClass('selected');
+
+    pageId = target.getAttribute('href');
+
+    var jsonLink = Y.config.baseUrl + "/" + pageId + ".data";
+    //Y.log(jsonLink);
+
+    Y.io(jsonLink, {
+        on: {
+            success: function(i, o) {
+                var data = Y.JSON.parse(o.responseText);
+                nodeContent.set('innerHTML', data.content);
+            }
+        }
+    });
+
+    history.add({
+        'page': pageId
+    }, {
+        //url: Y.config.baseUrl + "/" + pageId
+    });
+}
+
+function onPageClick(ev) {
+
+    if (ev.target.hasClass('navi')) {
+        navigate(ev.target);
+        ev.preventDefault();
+    }
+}
+
+Y.delegate('click', onPageClick, 'body', 'a');
 
 });
         </script>
