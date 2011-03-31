@@ -10,7 +10,9 @@
         <link type="text/css" src="http://localhost/3.3.0/build/cssgrids/grids-min.css"/>
 
         <!-- <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script> -->
+<!--
         <script type="text/javascript" src="/yui3-gallery/src/gallery-unified-history/build_tmp/gallery-unified-history-debug.js"></script>
+-->
 
         <style type="text/css" media="screen"> #demo{
     width: 640px;
@@ -71,6 +73,7 @@ ul.list .selected{
     </head>
     <body class="yui3-skin-sam doc2">
 <?php
+
     $requestUri = $_SERVER['REQUEST_URI'];
     $selfUri = $_SERVER['PHP_SELF'];
     $selfDirName = dirname($selfUri);
@@ -86,10 +89,10 @@ ul.list .selected{
         if (substr($paramsStr, 0, 1) == '?') {
             parse_str(substr($paramsStr, 1), $params);
         } else {
-            $arr = split('/', $paramsStr);
+            $arr = preg_split('/\//', $paramsStr);
             $params = array(
                 'page' => $arr[0],
-                'display' => $arr[1]
+                'display' => count($arr) > 1 ? $arr[1] : null,
             );
         }
         $params['display' ] = $params['display'] ? $params['display'] : 'list';
@@ -110,7 +113,10 @@ ul.list .selected{
 
 ?>
     <script type="text/javascript">
-        YUI_config = {baseUrl : "<?php echo $selfDirName ?>"};
+        YUI_config = { 
+            baseUrl : "<?php echo $selfDirName; ?>",
+            currPage: "<?php echo $params['page']; ?>"
+        };
     </script>
         <div id="demo">
             <div class='hd'>
@@ -152,7 +158,8 @@ var history = new Y.History({
 });
  */
 
-var history = new Y.HistoryHash();
+var history = new Y.History();
+//var history = new Y.HistoryHash();
 //var history = new Y.HistoryHTML5();
 
 /*
@@ -161,10 +168,14 @@ var history = new Y.HistoryHTML5({
 });
  */
 
-//alert(history.get('page'));
-var currPage = history.get('page');
-currPage = currPage || 'home';
-navigate(Y.one('#' + currPage));
+var currPage;
+if (!History.html5) {
+    currPage = history.get('page');
+    currPage = currPage || 'home';
+    navigate(Y.one('#' + currPage));
+} else {
+    currPage = Y.config.currPage;
+}
 
 history.on('pageChange', function(ev) {
     Y.log(ev.src);
@@ -188,15 +199,17 @@ function navigate(target) {
             success: function(i, o) {
                 var data = Y.JSON.parse(o.responseText);
                 nodeContent.set('innerHTML', data.content);
+
+                history.add({
+                    'page': pageId
+                }, {
+                    title: data.title,
+                    url: Y.config.baseUrl + "/" + pageId
+                });
             }
         }
     });
 
-    history.add({
-        'page': pageId
-    }, {
-        //url: Y.config.baseUrl + "/" + pageId
-    });
 }
 
 function onPageClick(ev) {
