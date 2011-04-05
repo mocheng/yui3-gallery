@@ -1,4 +1,46 @@
+<?php
+
+    $requestUri = $_SERVER['REQUEST_URI'];
+    $selfUri = $_SERVER['PHP_SELF'];
+    $selfDirName = dirname($selfUri);
+    //var_dump($selfDirName);
+
+    $paramsStr = substr($requestUri, strlen($selfDirName)+1);
+
+    if (!$paramsStr) {
+        $params = array(
+            'page' => 'home',
+            'display' => 'list'
+        );
+    } else {
+        if (substr($paramsStr, 0, 1) == '?') {
+            parse_str(substr($paramsStr, 1), $params);
+        } else {
+            $arr = preg_split('/\//', $paramsStr);
+            $params = array(
+                'page' => $arr[0],
+                'display' => count($arr) > 1 ? $arr[1] : null,
+            );
+        }
+        $params['display' ] = $params['display'] ? $params['display'] : 'list';
+    }
+
+    if (!$params['page'] || !$params['display']) {
+        header("HTTP/1.0 404 Not Found");
+        echo 'Page not found';
+        return;
+    }
+
+    $jsonFile = './' . $params['page'] . '.data';
+    if (!file_exists($jsonFile)) {
+        header("HTTP/1.0 404 Not Found");
+        echo 'Resource not found';
+        return;
+    }
+
+?>
 <!DOCTYPE HTML>
+
 <html>
     <head>
         <meta name="viewport" content="width=device-width,user-scalable=no">
@@ -10,9 +52,7 @@
         <link type="text/css" src="http://localhost/3.3.0/build/cssgrids/grids-min.css"/>
 
         <!-- <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script> -->
-<!--
         <script type="text/javascript" src="/yui3-gallery/src/gallery-unified-history/build_tmp/gallery-unified-history-debug.js"></script>
--->
 
         <style type="text/css" media="screen"> #demo{
     width: 640px;
@@ -69,49 +109,18 @@ ul.list .selected{
 .floatRight {
     float: right;
 }
+
+#console {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    width:300px;
+    height: 2em;
+    background: yellow;
+}
         </style>
     </head>
     <body class="yui3-skin-sam doc2">
-<?php
-
-    $requestUri = $_SERVER['REQUEST_URI'];
-    $selfUri = $_SERVER['PHP_SELF'];
-    $selfDirName = dirname($selfUri);
-
-    $paramsStr = substr($requestUri, strlen($selfDirName)+1);
-
-    if (!$paramsStr) {
-        $params = array(
-            'page' => 'home',
-            'display' => 'list'
-        );
-    } else {
-        if (substr($paramsStr, 0, 1) == '?') {
-            parse_str(substr($paramsStr, 1), $params);
-        } else {
-            $arr = preg_split('/\//', $paramsStr);
-            $params = array(
-                'page' => $arr[0],
-                'display' => count($arr) > 1 ? $arr[1] : null,
-            );
-        }
-        $params['display' ] = $params['display'] ? $params['display'] : 'list';
-    }
-
-    if (!$params['page'] || !$params['display']) {
-        header("HTTP/1.0 404 Not Found");
-        echo 'Page not found';
-        return;
-    }
-
-    $jsonFile = './' . $params['page'] . '.data';
-    if (!file_exists($jsonFile)) {
-        header("HTTP/1.0 404 Not Found");
-        echo 'Resource not found';
-        return;
-    }
-
-?>
     <script type="text/javascript">
         YUI_config = { 
             baseUrl : "<?php echo $selfDirName; ?>",
@@ -140,41 +149,41 @@ ul.list .selected{
                 </p>
             </div>
         </div>
-        <div id="console">
+            <div id="console"></div>
         </div>
 
         <script type="text/javascript" charset="utf-8">
 YUI({
-    //filter: 'raw',
-    //combine: false
-//}).use(/*'gallery-unified-history',*/ 'history', 'node', 'io', 'json', function(Y) {
-}).use('history', 'node', 'io', 'json', function(Y) {
+    filter: 'raw',
+    combine: false
+}).use('history', 'gallery-unified-history', 'node', 'io', 'json', function(Y) {
 
-var nodeContent = Y.one('#content');
+var nodeContent = Y.one('#content'),
 
-/*
-var history = new Y.History({
-    usePath: ['page', 'display']
-});
- */
+    consoleNode = Y.one('#console'),
 
-var history = new Y.History();
-//var history = new Y.HistoryHash();
-//var history = new Y.HistoryHTML5();
+    life = 0,
 
-/*
-var history = new Y.HistoryHTML5({
-    usePath: ['page']
-});
- */
+    history = new Y.HistoryHash({
+        usePath: ['page', 'display']
+        //useKeyValuePair: 1
+    }),
 
-var currPage;
-if (!History.html5) {
-    currPage = history.get('page');
-    currPage = currPage || 'home';
-    navigate(Y.one('#' + currPage));
-} else {
+    currPage;
+
+Y.later(1000, null, function() {
+    life ++;
+    consoleNode.set('innerHTML', 'The page has lived for ' + life + ' seconds');
+}, null, true);
+
+if (Y.History.html5) {
     currPage = Y.config.currPage;
+} else {
+    currPage = history.get('page');
+    if (window.location.toString() === Y.config.baseUrl || currPage) {
+        currPage = currPage || 'home';
+        navigate(Y.one('#' + currPage));
+    }
 }
 
 history.on('pageChange', function(ev) {
@@ -200,6 +209,7 @@ function navigate(target) {
                 var data = Y.JSON.parse(o.responseText);
                 nodeContent.set('innerHTML', data.content);
 
+                Y.log('start history.add');
                 history.add({
                     'page': pageId
                 }, {
