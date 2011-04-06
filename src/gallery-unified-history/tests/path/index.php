@@ -48,10 +48,12 @@
         <meta http-equiv="content-type" content="text/html; charset=utf-8">
         <title>Test</title>
         <!--for local dev without WIFI -->
+<!--
         <script type="text/javascript" src="http://localhost/3.3.0/build/yui/yui-min.js"></script>
         <link type="text/css" src="http://localhost/3.3.0/build/cssgrids/grids-min.css"/>
+-->
 
-        <!-- <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script> -->
+        <script type="text/javascript" src="http://yui.yahooapis.com/combo?3.3.0/build/yui/yui-min.js"></script>
         <script type="text/javascript" src="/yui3-gallery/src/gallery-unified-history/build_tmp/gallery-unified-history-debug.js"></script>
 
         <style type="text/css" media="screen"> #demo{
@@ -154,8 +156,8 @@ ul.list .selected{
 
         <script type="text/javascript" charset="utf-8">
 YUI({
-    filter: 'raw',
-    combine: false
+//    filter: 'raw',
+//    combine: false
 }).use('history', 'gallery-unified-history', 'node', 'io', 'json', function(Y) {
 
 var nodeContent = Y.one('#content'),
@@ -176,15 +178,9 @@ Y.later(1000, null, function() {
     consoleNode.set('innerHTML', 'The page has lived for ' + life + ' seconds');
 }, null, true);
 
-if (Y.History.html5) {
-    currPage = Y.config.currPage;
-} else {
-    currPage = history.get('page');
-    if (window.location.toString() === Y.config.baseUrl || currPage) {
-        currPage = currPage || 'home';
-        navigate(Y.one('#' + currPage));
-    }
-}
+currPage = history.get('page');
+currPage = currPage || 'home';
+navigate(Y.one('#' + currPage));
 
 history.on('pageChange', function(ev) {
     Y.log(ev.src);

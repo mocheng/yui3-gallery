@@ -9,60 +9,14 @@ var SRC_POPSTATE    = 'popstate',
     location        = win.location,
 
     HistoryHash     = Y.HistoryHash,
-    //HistoryHTML5    = Y.HistoryHTML5,
 
-    //_nativeHTML5Init = HistoryHTML5.prototype._init,
     _nativeHashInit = HistoryHash.prototype._init,
     nativeParseHash = HistoryHash.parseHash,
     nativeCreateHash = HistoryHash.createHash;
 
-//////////////////////////////////
-// HistoryHTML5 part
-//////////////////////////////////
-/*
-function getHtml5UrlFragment(state, config) {
-    if (config.useKeyValuePair) {
-        return (location.href.indexOf('?') != -1 ? '&' : '?') + nativeCreateHash(state);
-    } else if (config.usePath) {
-
-        //TODO: what if url has query string or hash fragment?
-        return (location.href.charAt(location.href.length-1) === '/' ? '' : '/') + HistoryHash._createPath(state, config.usePath);
-    }
-}
-*/
-
-/**
- *
- * Update URL according to new state.
- *
- * @method _updateUrl
- * @param {String} src Source of the changes.
- * @param {Object} newState New state to store.
- * @param {Object} options Zero or more options.
- * @protected
- */
-/*
-HistoryHTML5._updateUrl = function(src, newState, options) {
-    if (src !== SRC_POPSTATE) {
-        options.url = location.href + getHtml5UrlFragment(newState, this._config);
-    }
-};
-*/
-
-/*
-HistoryHTML5.prototype._init = function() {
-    Do.before(HistoryHTML5._updateUrl, this, '_storeState', this);
-
-    _nativeHTML5Init.apply(this, arguments);
-};
-*/
-
-
-//////////////////////////////////
-// HistoryHash part
-//////////////////////////////////
-
 HistoryHash.prototype._init = function(config) {
+
+    this._config = config || {};
 
     // HistoryHash.parseHash and HistoryHash.createHash should be redefined. But,
     // the two methods are static and cannot access "this" instance. So, an static
@@ -100,9 +54,9 @@ HistoryHash._ejectInstance = function(config) {
 HistoryHash.parseHash = function (hash) {
 
     var usePath = HistoryHash._currInstance && HistoryHash._currInstance._config && HistoryHash._currInstance._config.usePath;
+
     if (!usePath) {
-        nativeParseHash.apply(this, arguments);
-        return;
+        return nativeParseHash.apply(this, arguments);
     } else {
         return HistoryHash._parsePath(hash, usePath);
     }
