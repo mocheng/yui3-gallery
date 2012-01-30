@@ -1,0 +1,1 @@
+YUI.add("gallery-flipview",function(a){YUI.add("gallery-flipview",function(b){},"@VERSION@",{requires:["transition"," node"]});},"@VERSION@",{requires:["transition","node"],skinnable:false});
