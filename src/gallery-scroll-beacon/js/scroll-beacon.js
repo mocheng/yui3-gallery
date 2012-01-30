@@ -59,7 +59,7 @@ Y.Event.define(EVENT_TYPE, {
         subscription._nodeList.each(function(targetNode, i) {
             if (Y.DOM.inViewportRegion(Y.Node.getDOMNode(targetNode), false)) {
                 if (!subscription._inViewport) {
-                    notifier.fire(;
+                    notifier.fire();
                 }
                 subscription._inViewport = true;
             } else {
