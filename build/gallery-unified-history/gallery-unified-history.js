@@ -127,4 +127,4 @@ HistoryHash._createPath = function (params, usePathConfig) {
 
 
 
-}, '@VERSION@' ,{skinnable:false, requires:['history-hash']});
+}, 'gallery-2011.04.13-22-38' ,{requires:['history-hash'], skinnable:false});
