@@ -25,6 +25,8 @@
 .yui3-flipview-content {
     -webkit-perspective: 3000;
     -moz-perspective: 3000;
+    -ms-perspective: 3000;
+    -o-perspective: 3000;
     perspective: 3000;
 
     /*display: inline-block;*/
@@ -32,13 +34,18 @@
 
 .yui3-flipview-content > .page {
     -webkit-transform: translate3d(0,0,0);
+    -moz-transform: translate3d(0,0,0);
+    -ms-transform: translate3d(0,0,0);
+    -o-transform: translate3d(0,0,0);
+    transform: translate3d(0,0,0);
     position: absolute;
-    background: #FFF;
 
     border: none;
 
     -webkit-backface-visibility: hidden;
     -moz-backface-visibility: hidden;
+    -ms-backface-visibility: hidden;
+    -o-backface-visibility: hidden;
     backface-visibility: hidden;
 }
 
@@ -52,26 +59,40 @@
 .yui3-flipview-content .right-flip {
     -webkit-backface-visibility: hidden;
     -moz-backface-visibility: hidden;
+    -ms-backface-visibility: hidden;
+    -o-backface-visibility: hidden;
     backface-visibility: hidden;
 
-    /*border: 1px solid #BFBFBF;*/
     border-left: none;
     top: 0px;
     right: 0px;
     width: 50%;
     overflow: hidden;
     -webkit-transform-origin: left center;
+    -moz-transform-origin: left center;
+    -ms-transform-origin: left center;
+    -o-transform-origin: left center;
+    transform-origin: left center;
 }
 
 .yui3-flipview-content .right-flip.to-left {
-    -webkit-transform: left center;
+    -webkit-transform-origin: left center;
     -webkit-transform: rotateY(-180deg);
-    /*border: 1pxp solid red;*/
+    -moz-transform-origin: left center;
+    -moz-transform: rotateY(-180deg);
+    -ms-transform-origin: left center;
+    -ms-transform: rotateY(-180deg);
+    -o-transform-origin: left center;
+    -o-transform: rotateY(-180deg);
+    transform-origin: left center;
+    transform: rotateY(-180deg);
 }
 
 .yui3-flipview-content .left-flip {
     -webkit-backface-visibility: hidden;
     -moz-backface-visibility: hidden;
+    -ms-backface-visibility: hidden;
+    -o-backface-visibility: hidden;
     backface-visibility: hidden;
 
     /*border: 1px solid #BFBFBF;*/
@@ -80,6 +101,15 @@
     overflow: hidden;
     -webkit-transform-origin: right center;
     -webkit-transform: rotateY(180deg);
+    -moz-transform-origin: right center;
+    -moz-transform: rotateY(180deg);
+    -ms-transform-origin: right center;
+    -ms-transform: rotateY(180deg);
+    -o-transform-origin: right center;
+    -o-transform: rotateY(180deg);
+    transform-origin: right center;
+    transform: rotateY(180deg);
+
     left: 0px;
     top: 0px;
 }
@@ -87,6 +117,15 @@
 .yui3-flipview-content .left-flip.to-left {
     -webkit-transform-origin: right center;
     -webkit-transform: rotateY(-0deg);
+    -moz-transform-origin: right center;
+    -moz-transform: rotateY(-0deg);
+    -ms-transform-origin: right center;
+    -ms-transform: rotateY(-0deg);
+    -o-transform-origin: right center;
+    -o-transform: rotateY(-0deg);
+    transform-origin: right center;
+    transform: rotateY(-0deg);
+
 }
 
 .yui3-flipview-content .left-clipper {
